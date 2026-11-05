@@ -11,6 +11,10 @@ export function App() {
   const [helpOpen, setHelpOpen] = useState(true);
   const [message, setMessage] = useState("Your building world is ready.");
   const [hasSavedWorld, setHasSavedWorld] = useState(false);
+  const [buildingTool, setBuildingTool] = useState<"place" | "line" | "fill" | "copy" | "paste">("place");
+  const [blueprintName, setBlueprintName] = useState("");
+  const [measurementTarget, setMeasurementTarget] = useState("");
+  const [measurementResult, setMeasurementResult] = useState<string | null>(null);
   const gameRef = useRef<GameActions | null>(null);
   const toastTimerRef = useRef<number | null>(null);
 
@@ -49,7 +53,7 @@ export function App() {
           </div>
         </div>
         <div className="topbar-right">
-          <span className="version-pill">V0.2</span>
+          <span className="version-pill">V0.3</span>
           <button className="subtle-button" onClick={() => setHelpOpen((value) => !value)}>
             {helpOpen ? "Hide guide" : "Controls"}
           </button>
@@ -66,6 +70,84 @@ export function App() {
               setHasSavedWorld(true);
             }
           }}>Save world</button>
+
+          <div className="v03-tools">
+            <label className="tool-label">Tool:</label>
+            <select
+              className="tool-select"
+              value={buildingTool}
+              onChange={(e) => setBuildingTool(e.target.value as "place" | "line" | "fill" | "copy" | "paste")}
+            >
+              <option value="place">Place</option>
+              <option value="line">Line</option>
+              <option value="fill">Fill</option>
+              <option value="copy">Copy</option>
+              <option value="paste">Paste</option>
+            </select>
+            <button className="subtle-button" onClick={() => {
+              const bt = gameRef.current?.buildingTools;
+              if (!bt) return;
+              bt.setTool(buildingTool);
+              showMessage(`Building tool: ${buildingTool}`);
+            }}>Set tool</button>
+
+            <label className="tool-label">Blueprint:</label>
+            <input
+              className="tool-input"
+              value={blueprintName}
+              onChange={(e) => setBlueprintName(e.target.value)}
+              placeholder="name"
+            />
+            <button className="subtle-button" onClick={() => {
+              const bp = gameRef.current?.blueprint;
+              const bt = gameRef.current?.buildingTools;
+              if (!bp || !bt || !blueprintName) return;
+              const clipboard = bt.getClipboard();
+              if (clipboard.length === 0) {
+                showMessage("Copy a region first.");
+                return;
+              }
+              if (bp.saveBlueprint(blueprintName, clipboard)) {
+                showMessage(`Blueprint "${blueprintName}" saved.`);
+              } else {
+                showMessage("Blueprint name already exists.");
+              }
+            }}>Save blueprint</button>
+            <button className="subtle-button" disabled={!blueprintName} onClick={() => {
+              const bp = gameRef.current?.blueprint;
+              const bt = gameRef.current?.buildingTools;
+              if (!bp || !bt || !blueprintName) return;
+              const placed = bp.placeBlueprint(blueprintName, { x: 0, y: 0, z: 0 });
+              if (placed > 0) {
+                showMessage(`Blueprint "${blueprintName}" placed (${placed} blocks).`);
+              } else {
+                showMessage("Blueprint not found.");
+              }
+            }}>Place blueprint</button>
+
+            <label className="tool-label">Measure target:</label>
+            <input
+              className="tool-input"
+              value={measurementTarget}
+              onChange={(e) => setMeasurementTarget(e.target.value)}
+              placeholder="blocks"
+            />
+            <button className="subtle-button" onClick={() => {
+              const m = gameRef.current?.measurement;
+              if (!m) return;
+              const target = Number(measurementTarget);
+              if (!Number.isFinite(target)) {
+                showMessage("Enter a valid number.");
+                return;
+              }
+              m.setChallenge({ type: "distance", target, tolerance: 0.5 });
+              const result = m.measureDistance({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+              const check = m.checkChallenge(result);
+              setMeasurementResult(check.message);
+              showMessage(check.message);
+            }}>Check challenge</button>
+            {measurementResult && <span className="tool-hint">{measurementResult}</span>}
+          </div>
         </div>
       </header>
 
@@ -112,7 +194,7 @@ export function App() {
       </section>
 
       <footer className="footer">
-        <span>CASTLE ACADEMY <b>V0.2</b></span>
+        <span>CASTLE ACADEMY <b>V0.3</b></span>
         <span>BUILD FIRST. SIMULATE NEXT. LEARN THROUGH BUILDING.</span>
         <span>LOCAL CREATIVE WORLD</span>
       </footer>

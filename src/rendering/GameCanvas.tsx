@@ -5,6 +5,9 @@ import type { WorldState } from "../core/world/WorldState";
 import type { EventBus } from "../core/events/EventBus";
 import { ThreeWorldRenderer } from "./ThreeWorldRenderer";
 import { PersistencePlugin } from "../plugins/persistence/PersistencePlugin";
+import { BuildingToolsPlugin } from "../plugins/building-tools/BuildingToolsPlugin";
+import { BlueprintPlugin } from "../plugins/blueprint/BlueprintPlugin";
+import { MeasurementPlugin } from "../plugins/measurement/MeasurementPlugin";
 
 export interface GameActions {
   reset: () => void;
@@ -12,6 +15,9 @@ export interface GameActions {
   world: WorldState;
   events: EventBus;
   persistence: PersistencePlugin;
+  buildingTools: BuildingToolsPlugin;
+  blueprint: BlueprintPlugin;
+  measurement: MeasurementPlugin;
   reloadFromWorld: () => void;
 }
 
@@ -44,12 +50,31 @@ export function GameCanvas({ selectedBlock, onPlayingChange, onMessage, onPersis
     persistence.setReloadHandler(() => engine.reloadFromWorld());
     persistence.activate();
 
+    const buildingTools = new BuildingToolsPlugin(engine.world, engine.events);
+    buildingTools.activate();
+
+    const blueprint = new BlueprintPlugin(engine.world, engine.events);
+    blueprint.activate();
+
+    const measurement = new MeasurementPlugin();
+    measurement.activate();
+
+    // Restore any saved world so creations survive page refresh (V0.2 persistence).
+    if (persistence.hasSavedWorld()) {
+      persistence.loadWorld();
+    }
+
+    onPersistenceReady?.();
+
     gameRef.current = {
       reset: () => engine.reset(),
       requestPointerLock: () => engine.player.requestPointerLock(),
       world: engine.world,
       events: engine.events,
       persistence,
+      buildingTools,
+      blueprint,
+      measurement,
       reloadFromWorld: () => engine.reloadFromWorld()
     };
 
@@ -66,6 +91,9 @@ export function GameCanvas({ selectedBlock, onPlayingChange, onMessage, onPersis
 
     return () => {
       document.removeEventListener("pointerlockchange", onPointerLock);
+      measurement.dispose();
+      blueprint.dispose();
+      buildingTools.dispose();
       persistence.dispose();
       gameRef.current = null;
       engineRef.current = null;
