@@ -3,18 +3,11 @@ import type { GridPosition } from "../../core/world/coordinates";
 import { WorldState } from "../../core/world/WorldState";
 import { EventBus } from "../../core/events/EventBus";
 
-interface StoreBlock {
-  x: number;
-  y: number;
-  z: number;
-  blockId: BlockId;
-}
-
 /**
  * Building tools plugin (V0.3).
  *
  * Provides higher-order block operations beyond single-block place/remove:
- * line placement, rectangle fill, region copy, and region paste.
+ * line placement and rectangle fill.
  *
  * Mutates WorldState only through its public `place`/`remove` interface and
  * notifies through the event bus. It does not depend on other plugins.
@@ -27,8 +20,7 @@ export class BuildingToolsPlugin {
   readonly version = "0.3.0";
 
   private active = false;
-  private tool: "place" | "line" | "fill" | "copy" | "paste" = "place";
-  private clipboard: StoreBlock[] = [];
+  private tool: "place" | "line" | "fill" = "place";
 
   constructor(
     private readonly world: WorldState,
@@ -53,16 +45,15 @@ export class BuildingToolsPlugin {
 
   dispose(): void {
     this.deactivate();
-    this.clipboard = [];
   }
 
   /* ---------- Tool selection ---------- */
 
-  getTool(): "place" | "line" | "fill" | "copy" | "paste" {
+  getTool(): "place" | "line" | "fill" {
     return this.tool;
   }
 
-  setTool(tool: "place" | "line" | "fill" | "copy" | "paste"): void {
+  setTool(tool: "place" | "line" | "fill"): void {
     this.tool = tool;
   }
 
@@ -124,85 +115,6 @@ export class BuildingToolsPlugin {
     }
     return placed;
   }
-
-  /* ---------- Region copy ---------- */
-
-  /**
-   * Snapshot all blocks inside an axis-aligned box (inclusive) into the clipboard.
-   * Returns the number of blocks copied.
-   */
-  copyRegion(min: GridPosition, max: GridPosition): number {
-    if (!this.active) return 0;
-    const lo = cornerMin(min, max);
-    const hi = cornerMax(min, max);
-    const copied: StoreBlock[] = [];
-    for (let x = lo.x; x <= hi.x; x++) {
-      for (let y = lo.y; y <= hi.y; y++) {
-        for (let z = lo.z; z <= hi.z; z++) {
-          const pos: GridPosition = { x, y, z };
-          const record = this.world.get(pos);
-          if (record) {
-            copied.push({ x: record.position.x, y: record.position.y, z: record.position.z, blockId: record.blockId });
-          }
-        }
-      }
-    }
-    // Normalize clipboard to be relative to its own min corner so pasting is translation-invariant.
-    const base = regionMin(copied);
-    this.clipboard = copied.map((b) => ({
-      x: b.x - base.x,
-      y: b.y - base.y,
-      z: b.z - base.z,
-      blockId: b.blockId,
-    }));
-    this.events.emit("world.building-tools.region-copied", {
-      min: lo,
-      max: hi,
-      count: this.clipboard.length,
-    });
-    return this.clipboard.length;
-  }
-
-  /** Blocks currently on the clipboard (relative coordinates). */
-  getClipboard(): ReadonlyArray<StoreBlock> {
-    return this.clipboard;
-  }
-
-  /** Clear the clipboard. */
-  clearClipboard(): void {
-    this.clipboard = [];
-    this.events.emit("world.building-tools.clipboard-cleared", {});
-  }
-
-  /* ---------- Region paste ---------- */
-
-  /**
-   * Paste the clipboard at `origin` (the clipboard's min corner aligns with origin).
-   * Blocks already present at a target position are not overwritten.
-   * Returns the number of blocks pasted.
-   */
-  pasteRegion(origin: GridPosition): number {
-    if (!this.active || this.clipboard.length === 0) return 0;
-    let placed = 0;
-    for (const block of this.clipboard) {
-      const pos: GridPosition = {
-        x: origin.x + block.x,
-        y: origin.y + block.y,
-        z: origin.z + block.z,
-      };
-      if (this.world.place(pos, block.blockId)) {
-        placed++;
-        this.events.emit("world.block.placed", { position: pos, blockId: block.blockId });
-      }
-    }
-    if (placed > 0) {
-      this.events.emit("world.building-tools.region-pasted", {
-        origin,
-        count: placed,
-      });
-    }
-    return placed;
-  }
 }
 
 /* ---------- Helpers ---------- */
@@ -240,15 +152,4 @@ function cornerMax(a: GridPosition, b: GridPosition): GridPosition {
     y: Math.max(a.y, b.y),
     z: Math.max(a.z, b.z),
   };
-}
-
-function regionMin(blocks: StoreBlock[]): GridPosition {
-  if (blocks.length === 0) return { x: 0, y: 0, z: 0 };
-  let minX = blocks[0].x, minY = blocks[0].y, minZ = blocks[0].z;
-  for (const b of blocks.slice(1)) {
-    if (b.x < minX) minX = b.x;
-    if (b.y < minY) minY = b.y;
-    if (b.z < minZ) minZ = b.z;
-  }
-  return { x: minX, y: minY, z: minZ };
 }

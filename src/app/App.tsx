@@ -11,7 +11,7 @@ export function App() {
   const [helpOpen, setHelpOpen] = useState(true);
   const [message, setMessage] = useState("Your building world is ready.");
   const [hasSavedWorld, setHasSavedWorld] = useState(false);
-  const [buildingTool, setBuildingTool] = useState<"place" | "line" | "fill" | "copy" | "paste">("place");
+  const [buildingTool, setBuildingTool] = useState<"place" | "line" | "fill">("place");
   const [blueprintName, setBlueprintName] = useState("");
   const [measurementTarget, setMeasurementTarget] = useState("");
   const [measurementResult, setMeasurementResult] = useState<string | null>(null);
@@ -33,14 +33,24 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    const toolOrder: Array<"place" | "line" | "fill"> = ["place", "line", "fill"];
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setPlaying(false);
       const index = Number(event.key) - 1;
       if (index >= 0 && index < BLOCKS.length) setSelectedBlock(BLOCKS[index].id);
+      if (event.key === "Tab") {
+        event.preventDefault();
+        const current = toolOrder.indexOf(buildingTool);
+        const next = toolOrder[(current + 1) % toolOrder.length];
+        setBuildingTool(next);
+        const bt = gameRef.current?.buildingTools;
+        if (bt) bt.setTool(next);
+        showMessage(`Building tool: ${next}`);
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [buildingTool, gameRef]);
 
   return (
     <main className="app-shell">
@@ -76,20 +86,18 @@ export function App() {
             <select
               className="tool-select"
               value={buildingTool}
-              onChange={(e) => setBuildingTool(e.target.value as "place" | "line" | "fill" | "copy" | "paste")}
+              onChange={(e) => {
+                const next = e.target.value as "place" | "line" | "fill";
+                setBuildingTool(next);
+                const bt = gameRef.current?.buildingTools;
+                if (bt) bt.setTool(next);
+                showMessage(`Building tool: ${next}`);
+              }}
             >
               <option value="place">Place</option>
               <option value="line">Line</option>
               <option value="fill">Fill</option>
-              <option value="copy">Copy</option>
-              <option value="paste">Paste</option>
             </select>
-            <button className="subtle-button" onClick={() => {
-              const bt = gameRef.current?.buildingTools;
-              if (!bt) return;
-              bt.setTool(buildingTool);
-              showMessage(`Building tool: ${buildingTool}`);
-            }}>Set tool</button>
 
             <label className="tool-label">Blueprint:</label>
             <input
@@ -98,25 +106,9 @@ export function App() {
               onChange={(e) => setBlueprintName(e.target.value)}
               placeholder="name"
             />
-            <button className="subtle-button" onClick={() => {
-              const bp = gameRef.current?.blueprint;
-              const bt = gameRef.current?.buildingTools;
-              if (!bp || !bt || !blueprintName) return;
-              const clipboard = bt.getClipboard();
-              if (clipboard.length === 0) {
-                showMessage("Copy a region first.");
-                return;
-              }
-              if (bp.saveBlueprint(blueprintName, clipboard)) {
-                showMessage(`Blueprint "${blueprintName}" saved.`);
-              } else {
-                showMessage("Blueprint name already exists.");
-              }
-            }}>Save blueprint</button>
             <button className="subtle-button" disabled={!blueprintName} onClick={() => {
               const bp = gameRef.current?.blueprint;
-              const bt = gameRef.current?.buildingTools;
-              if (!bp || !bt || !blueprintName) return;
+              if (!bp || !blueprintName) return;
               const placed = bp.placeBlueprint(blueprintName, { x: 0, y: 0, z: 0 });
               if (placed > 0) {
                 showMessage(`Blueprint "${blueprintName}" placed (${placed} blocks).`);

@@ -4,6 +4,9 @@ import { BLOCKS, type BlockId } from "../core/world/blocks";
 import type { GridPosition } from "../core/world/coordinates";
 import { PlayerController } from "../plugins/player-controller/PlayerController";
 import { BuildingPlugin } from "../plugins/building/BuildingPlugin";
+import { BuildingToolsPlugin } from "../plugins/building-tools/BuildingToolsPlugin";
+import { BlueprintPlugin } from "../plugins/blueprint/BlueprintPlugin";
+import { MeasurementPlugin } from "../plugins/measurement/MeasurementPlugin";
 import { EventBus } from "../core/events/EventBus";
 
 const BLOCK_SIZE = 1;
@@ -14,8 +17,13 @@ export class ThreeWorldRenderer {
   readonly world = new WorldState();
   readonly events = new EventBus();
   readonly building = new BuildingPlugin(this.world, this.events);
+  readonly buildingTools = new BuildingToolsPlugin(this.world, this.events);
+  readonly blueprint = new BlueprintPlugin(this.world, this.events);
+  readonly measurement = new MeasurementPlugin();
   readonly player: PlayerController;
   private readonly blockMeshes = new Map<string, THREE.Mesh>();
+  private lineStart: GridPosition | null = null;
+  private fillStart: GridPosition | null = null;
   private readonly geometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
   private readonly materials = new Map<BlockId, THREE.MeshStandardMaterial>();
   private readonly ground: THREE.Mesh;
@@ -79,6 +87,9 @@ export class ThreeWorldRenderer {
     });
 
     this.player = new PlayerController(this.renderer.domElement, this.world, this.onMessage);
+    this.buildingTools.activate();
+    this.blueprint.activate();
+    this.measurement.activate();
     this.renderer.domElement.dataset.testid = "game-canvas";
     this.resize();
     window.addEventListener("resize", this.resize);
@@ -179,6 +190,40 @@ export class ThreeWorldRenderer {
       if (!position) return;
       const selected = (this.host.closest("[data-selected-block]") as HTMLElement | null)?.dataset.selectedBlock;
       const blockId = (selected || "grass") as BlockId;
+
+      const tool = this.buildingTools.getTool();
+
+      // Clear pending state for tools that are not currently selected.
+      if (tool !== "line") this.lineStart = null;
+      if (tool !== "fill") this.fillStart = null;
+
+      if (tool === "line") {
+        if (!this.lineStart) {
+          this.lineStart = position;
+          this.onMessage(`Line start set at (${position.x},${position.y},${position.z}). Click again to place line.`);
+          return;
+        }
+        const count = this.buildingTools.placeLine(this.lineStart, position, blockId);
+        this.lineStart = null;
+        this.reloadFromWorld();
+        this.onMessage(`Line placed: ${count} blocks.`);
+        return;
+      }
+
+      if (tool === "fill") {
+        if (!this.fillStart) {
+          this.fillStart = position;
+          this.onMessage(`Fill start set at (${position.x},${position.y},${position.z}). Click again to fill rectangle.`);
+          return;
+        }
+        const count = this.buildingTools.fillRectangle(this.fillStart, position, blockId);
+        this.fillStart = null;
+        this.reloadFromWorld();
+        this.onMessage(`Fill placed: ${count} blocks.`);
+        return;
+      }
+
+      // Default: place a single block.
       this.addBlock(position, blockId);
     } else if (event.button === 2) {
       this.removeBlock(this.targetPosition);

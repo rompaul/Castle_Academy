@@ -22,9 +22,6 @@ describe("BuildingToolsPlugin", () => {
     const { plugin } = makePlugin();
     expect(plugin.placeLine({ x: 0, y: 0, z: 0 }, { x: 2, y: 0, z: 0 }, "grass")).toBe(0);
     expect(plugin.fillRectangle({ x: 0, y: 0, z: 0 }, { x: 1, y: 1, z: 1 }, "stone")).toBe(0);
-    expect(plugin.copyRegion({ x: 0, y: 0, z: 0 }, { x: 1, y: 1, z: 1 })).toBe(0);
-    expect(plugin.pasteRegion({ x: 0, y: 0, z: 0 })).toBe(0);
-    expect(plugin.getClipboard().length).toBe(0);
   });
 
   it("places blocks along a 3D line", () => {
@@ -72,51 +69,5 @@ describe("BuildingToolsPlugin", () => {
     const count = plugin.fillRectangle({ x: 2, y: 2, z: 2 }, { x: 0, y: 0, z: 0 }, "wood");
     // min=(0,0,0), max=(2,2,2) => 3x3x3 = 27 blocks
     expect(count).toBe(27);
-  });
-
-  it("copyRegion snapshots blocks relative to min corner", () => {
-    const { world, plugin } = makePlugin();
-    plugin.activate();
-
-    world.place({ x: 5, y: 5, z: 5 }, "grass");
-    world.place({ x: 6, y: 5, z: 5 }, "dirt");
-
-    const count = plugin.copyRegion({ x: 5, y: 5, z: 5 }, { x: 6, y: 5, z: 5 });
-    expect(count).toBe(2);
-    const clipboard = plugin.getClipboard();
-    expect(clipboard.length).toBe(2);
-    // Normalized relative to min corner (5,5,5)
-    expect(clipboard.find((b) => b.x === 0 && b.y === 0 && b.z === 0)?.blockId).toBe("grass");
-    expect(clipboard.find((b) => b.x === 1 && b.y === 0 && b.z === 0)?.blockId).toBe("dirt");
-  });
-
-  it("pasteRegion places clipboard at origin without overwriting existing", () => {
-    const { world, plugin } = makePlugin();
-    plugin.activate();
-
-    world.place({ x: 0, y: 0, z: 0 }, "grass");
-    world.place({ x: 1, y: 0, z: 0 }, "dirt");
-    plugin.copyRegion({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 });
-
-    // Paste at origin (5,5,5); existing grass at (0,0,0) should not be overwritten
-    const pasted = plugin.pasteRegion({ x: 5, y: 5, z: 5 });
-    expect(pasted).toBe(2);
-    expect(world.has({ x: 5, y: 5, z: 5 })).toBe(true);
-    expect(world.get({ x: 5, y: 5, z: 5 })?.blockId).toBe("grass");
-    expect(world.get({ x: 6, y: 5, z: 5 })?.blockId).toBe("dirt");
-
-    // Paste again at same origin: existing blocks not overwritten, count should be 0
-    const pastedAgain = plugin.pasteRegion({ x: 5, y: 5, z: 5 });
-    expect(pastedAgain).toBe(0);
-  });
-
-  it("clearClipboard empties the clipboard", () => {
-    const { world, plugin } = makePlugin();
-    plugin.activate();
-    world.place({ x: 0, y: 0, z: 0 }, "grass");
-    plugin.copyRegion({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
-    expect(plugin.getClipboard().length).toBe(1);
-    plugin.clearClipboard();
-    expect(plugin.getClipboard().length).toBe(0);
   });
 });

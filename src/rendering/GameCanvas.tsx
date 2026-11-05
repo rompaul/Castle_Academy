@@ -5,9 +5,9 @@ import type { WorldState } from "../core/world/WorldState";
 import type { EventBus } from "../core/events/EventBus";
 import { ThreeWorldRenderer } from "./ThreeWorldRenderer";
 import { PersistencePlugin } from "../plugins/persistence/PersistencePlugin";
-import { BuildingToolsPlugin } from "../plugins/building-tools/BuildingToolsPlugin";
-import { BlueprintPlugin } from "../plugins/blueprint/BlueprintPlugin";
-import { MeasurementPlugin } from "../plugins/measurement/MeasurementPlugin";
+import type { BuildingToolsPlugin } from "../plugins/building-tools/BuildingToolsPlugin";
+import type { BlueprintPlugin } from "../plugins/blueprint/BlueprintPlugin";
+import type { MeasurementPlugin } from "../plugins/measurement/MeasurementPlugin";
 
 export interface GameActions {
   reset: () => void;
@@ -50,15 +50,6 @@ export function GameCanvas({ selectedBlock, onPlayingChange, onMessage, onPersis
     persistence.setReloadHandler(() => engine.reloadFromWorld());
     persistence.activate();
 
-    const buildingTools = new BuildingToolsPlugin(engine.world, engine.events);
-    buildingTools.activate();
-
-    const blueprint = new BlueprintPlugin(engine.world, engine.events);
-    blueprint.activate();
-
-    const measurement = new MeasurementPlugin();
-    measurement.activate();
-
     // Restore any saved world so creations survive page refresh (V0.2 persistence).
     if (persistence.hasSavedWorld()) {
       persistence.loadWorld();
@@ -72,28 +63,20 @@ export function GameCanvas({ selectedBlock, onPlayingChange, onMessage, onPersis
       world: engine.world,
       events: engine.events,
       persistence,
-      buildingTools,
-      blueprint,
-      measurement,
+      buildingTools: engine.buildingTools,
+      blueprint: engine.blueprint,
+      measurement: engine.measurement,
       reloadFromWorld: () => engine.reloadFromWorld()
     };
-
-    // Restore any saved world so creations survive page refresh (V0.2 persistence).
-    // The Load button remains available for explicit rollback to the last save.
-    if (persistence.hasSavedWorld()) {
-      persistence.loadWorld();
-    }
-
-    onPersistenceReady?.();
 
     const onPointerLock = () => onPlayingChange(document.pointerLockElement === engine.renderer.domElement);
     document.addEventListener("pointerlockchange", onPointerLock);
 
     return () => {
       document.removeEventListener("pointerlockchange", onPointerLock);
-      measurement.dispose();
-      blueprint.dispose();
-      buildingTools.dispose();
+      engine.buildingTools.dispose();
+      engine.blueprint.dispose();
+      engine.measurement.dispose();
       persistence.dispose();
       gameRef.current = null;
       engineRef.current = null;
