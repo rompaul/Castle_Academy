@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { WorldState } from "../core/world/WorldState";
 import { BLOCKS, type BlockId } from "../core/world/blocks";
-import type { GridPosition } from "../core/world/coordinates";
+import { WORLD_BOUNDS, type GridPosition } from "../core/world/coordinates";
 import { PlayerController } from "../plugins/player-controller/PlayerController";
 import { BuildingPlugin } from "../plugins/building/BuildingPlugin";
 import { BuildingToolsPlugin } from "../plugins/building-tools/BuildingToolsPlugin";
@@ -61,7 +61,7 @@ export class ThreeWorldRenderer {
     this.groundGeometry = new THREE.BoxGeometry(32, 1, 32);
     this.groundMaterial = new THREE.MeshStandardMaterial({ color: 0x66834f, roughness: 1 });
     this.ground = new THREE.Mesh(this.groundGeometry, this.groundMaterial);
-    this.ground.position.y = -0.5;
+    this.ground.position.y = WORLD_BOUNDS.minY - 0.5;
     this.ground.receiveShadow = true;
     this.ground.userData.kind = "ground";
     this.scene.add(this.ground);

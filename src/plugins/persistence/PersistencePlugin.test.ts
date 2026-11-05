@@ -132,4 +132,63 @@ describe("PersistencePlugin", () => {
     expect(loaded[0].payload.blockCount).toBe(1);
     expect(reloadCalled).toBe(true);
   });
+
+  it("旧存档（version 1，含负 Y 坐标）直接加载，坐标与 blockId 不变", () => {
+    const store = new MapStorage();
+    const source = new WorldState();
+    source.place({ x: 0, y: 0, z: 0 }, "grass");
+    source.place({ x: 0, y: -4, z: 0 }, "stone");   // 负 Y（B1）
+    source.place({ x: 0, y: -8, z: -5 }, "wood");    // 负 Y（B2）
+
+    const sourceEvents = new EventBus();
+    const sourcePlugin = new PersistencePlugin(source, sourceEvents, { storageKey: "legacy", enabled: true }, store);
+    sourcePlugin.activate();
+    expect(sourcePlugin.saveWorld()).toBe(true);
+
+    // 确认存档为 version 1，不含 layer/section 字段（V0.4 不扩展 schema）
+    const raw = store.getItem("legacy")!;
+    const snapshot = JSON.parse(raw);
+    expect(snapshot.version).toBe(1);
+    expect(snapshot.blocks.length).toBe(3);
+
+    // 加载到新世界
+    const target = new WorldState();
+    const targetEvents = new EventBus();
+    const targetPlugin = new PersistencePlugin(target, targetEvents, { storageKey: "legacy", enabled: true }, store);
+    targetPlugin.activate();
+    expect(targetPlugin.loadWorld()).toBe(true);
+
+    // 迁移前后 block count、blockId、position 三元组一致
+    expect(target.serialize()).toEqual(source.serialize());
+    expect(target.get({ x: 0, y: -4, z: 0 })?.blockId).toBe("stone");
+    expect(target.get({ x: 0, y: -8, z: -5 })?.blockId).toBe("wood");
+  });
+
+  it("存档加载幂等：重复加载同一存档结果一致", () => {
+    const store = new MapStorage();
+    const source = new WorldState();
+    source.place({ x: 5, y: -1, z: 3 }, "glass");
+    source.place({ x: -2, y: -32, z: 0 }, "stone"); // Y 下界
+
+    const sourcePlugin = new PersistencePlugin(source, new EventBus(), { storageKey: "idempotent", enabled: true }, store);
+    sourcePlugin.activate();
+    expect(sourcePlugin.saveWorld()).toBe(true);
+
+    // 第一次加载
+    const world1 = new WorldState();
+    const plugin1 = new PersistencePlugin(world1, new EventBus(), { storageKey: "idempotent", enabled: true }, store);
+    plugin1.activate();
+    expect(plugin1.loadWorld()).toBe(true);
+    const first = world1.serialize();
+
+    // 第二次加载（同一存档，新世界）
+    const world2 = new WorldState();
+    const plugin2 = new PersistencePlugin(world2, new EventBus(), { storageKey: "idempotent", enabled: true }, store);
+    plugin2.activate();
+    expect(plugin2.loadWorld()).toBe(true);
+    const second = world2.serialize();
+
+    expect(second).toEqual(first);
+    expect(world2.size).toBe(2);
+  });
 });

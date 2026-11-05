@@ -17,4 +17,15 @@ describe("player voxel collision geometry", () => {
     expect(playerIntersectsBlock(0, 4, 0, 0, 0, 0)).toBe(false);
     expect(playerIntersectsBlock(2, 2.2, 0, 0, 0, 0)).toBe(false);
   });
+
+  it("检测负 Y（地下）方块的碰撞", () => {
+    // 玩家眼睛在地下方块内部（脚在方块内）
+    expect(playerIntersectsBlock(0, -3, 0, 0, -4, 0)).toBe(true);
+    // 玩家在方块上方，脚在方块顶面以上，无垂直重叠
+    expect(playerIntersectsBlock(0, -1.3, 0, 0, -4, 0)).toBe(false);
+    // 玩家在方块下方，头在方块底面以下，无垂直重叠
+    expect(playerIntersectsBlock(0, -5, 0, 0, -4, 0)).toBe(false);
+    // 水平无重叠
+    expect(playerIntersectsBlock(2, -3, 0, 0, -4, 0)).toBe(false);
+  });
 });

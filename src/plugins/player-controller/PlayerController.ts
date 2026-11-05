@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { WorldState } from "../../core/world/WorldState";
+import { WORLD_BOUNDS } from "../../core/world/coordinates";
 
 export interface PlayerInput {
   forward: boolean;
@@ -12,7 +13,7 @@ export interface PlayerInput {
 
 export const PLAYER_RADIUS = 0.28;
 export const PLAYER_EYE_HEIGHT = 1.65;
-const PLAYER_HEAD_CLEARANCE = 0.15;
+export const PLAYER_HEAD_CLEARANCE = 0.15;
 const MIN_XZ = -15.5;
 const MAX_XZ = 15.5;
 
@@ -114,7 +115,11 @@ export class PlayerController {
   }
 
   private tryMoveVertical(dy: number): void {
-    const nextY = THREE.MathUtils.clamp(this.camera.position.y + dy, PLAYER_EYE_HEIGHT, 24);
+    const nextY = THREE.MathUtils.clamp(
+      this.camera.position.y + dy,
+      WORLD_BOUNDS.minY + PLAYER_EYE_HEIGHT,
+      WORLD_BOUNDS.maxYExclusive - PLAYER_HEAD_CLEARANCE
+    );
     if (!this.collides(this.camera.position.x, nextY, this.camera.position.z)) this.camera.position.y = nextY;
   }
 
