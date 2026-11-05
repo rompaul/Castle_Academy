@@ -2,7 +2,7 @@ import { EventBus } from "../../core/events/EventBus";
 import { LayerRegistry } from "./LayerRegistry";
 import type { LayerDefinition } from "./LayerTypes";
 import type { LayerState, ViewMode } from "./LayerTypes";
-import { resolveLayerId, isPositionVisible, getVisibleLayerIds } from "./LayerRules";
+import { resolveLayerId, isLayerVisible, isPositionVisible, getVisibleLayerIds, type LayerRulesContext } from "./LayerRules";
 
 /**
  * LayerPlugin facade (V0.4)。
@@ -108,6 +108,18 @@ export class LayerPlugin {
 
   getLayerVisibility(layerId: string): boolean | undefined {
     return this.state.visibilityByLayer[layerId];
+  }
+
+  /** 判断指定图层是否有效可见（结合用户勾选与视图模式）。 */
+  isLayerEffectivelyVisible(layerId: string): boolean {
+    const context: LayerRulesContext = {
+      definitions: this.registry.getAll().reduce((map, def) => {
+        map.set(def.id, def);
+        return map;
+      }, new Map<string, LayerDefinition>()),
+      state: this.state,
+    };
+    return isLayerVisible(layerId, context);
   }
 
   getVisibilityByLayer(): Record<string, boolean> {
