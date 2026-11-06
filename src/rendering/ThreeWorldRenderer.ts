@@ -57,7 +57,13 @@ export class ThreeWorldRenderer {
     this.renderer.setClearColor(0x9eb6b5);
     this.host.appendChild(this.renderer.domElement);
 
-    this.layerPlugin = layerPlugin ?? new LayerPlugin(this.events, new LayerRegistry());
+    const registry = new LayerRegistry();
+    if (!layerPlugin) {
+      registry.register({ id: "basement-1", label: "Basement 1", kind: "basement", minY: -4, maxYExclusive: 0, order: -1, defaultVisible: true, buildable: true });
+      registry.register({ id: "ground", label: "Ground", kind: "ground-floor", minY: 0, maxYExclusive: 4, order: 0, defaultVisible: true, buildable: true });
+      registry.register({ id: "level-1", label: "Level 1", kind: "upper-floor", minY: 4, maxYExclusive: 8, order: 1, defaultVisible: true, buildable: true });
+    }
+    this.layerPlugin = layerPlugin ?? new LayerPlugin(this.events, registry);
     this.layerRenderAdapter = layerRenderAdapter ?? new LayerRenderAdapter(this.scene, this.layerPlugin);
 
     this.scene.background = new THREE.Color(0x9eb6b5);

@@ -8,6 +8,7 @@ import { PersistencePlugin } from "../plugins/persistence/PersistencePlugin";
 import type { BuildingToolsPlugin } from "../plugins/building-tools/BuildingToolsPlugin";
 import type { BlueprintPlugin } from "../plugins/blueprint/BlueprintPlugin";
 import type { MeasurementPlugin } from "../plugins/measurement/MeasurementPlugin";
+import type { LayerPlugin } from "../plugins/layers/LayerPlugin";
 
 export interface GameActions {
   reset: () => void;
@@ -18,6 +19,7 @@ export interface GameActions {
   buildingTools: BuildingToolsPlugin;
   blueprint: BlueprintPlugin;
   measurement: MeasurementPlugin;
+  layerPlugin: LayerPlugin;
   reloadFromWorld: () => void;
 }
 
@@ -66,6 +68,7 @@ export function GameCanvas({ selectedBlock, onPlayingChange, onMessage, onPersis
       buildingTools: engine.buildingTools,
       blueprint: engine.blueprint,
       measurement: engine.measurement,
+      layerPlugin: engine.layerPlugin,
       reloadFromWorld: () => engine.reloadFromWorld()
     };
 

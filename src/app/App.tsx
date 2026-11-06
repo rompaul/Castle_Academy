@@ -4,6 +4,7 @@ import type { GameActions } from "../rendering/GameCanvas";
 import { BLOCKS, type BlockId } from "../core/world/blocks";
 import { Hotbar } from "../ui/Hotbar";
 import { HelpPanel } from "../ui/HelpPanel";
+import type { ViewMode } from "../plugins/layers/LayerTypes";
 
 export function App() {
   const [selectedBlock, setSelectedBlock] = useState<BlockId>("grass");
@@ -15,8 +16,23 @@ export function App() {
   const [blueprintName, setBlueprintName] = useState("");
   const [measurementTarget, setMeasurementTarget] = useState("");
   const [measurementResult, setMeasurementResult] = useState<string | null>(null);
+  const [layerPanelOpen, setLayerPanelOpen] = useState(false);
   const gameRef = useRef<GameActions | null>(null);
   const toastTimerRef = useRef<number | null>(null);
+
+  const layerPlugin = gameRef.current?.layerPlugin;
+  const layers = layerPlugin ? layerPlugin.getAllLayers() : [];
+  const activeLayerId = layerPlugin ? layerPlugin.getActiveLayerId() : "";
+  const viewMode = layerPlugin ? layerPlugin.getViewMode() : { type: "all" };
+
+  const getLayerVisibility = (layerId: string): boolean => {
+    const v = layerPlugin?.getLayerVisibility(layerId);
+    if (v === undefined) {
+      const def = layers.find((l) => l.id === layerId);
+      return def ? def.defaultVisible : true;
+    }
+    return v;
+  };
 
   const showMessage = useCallback((text: string) => {
     setMessage(text);
@@ -64,6 +80,9 @@ export function App() {
         </div>
         <div className="topbar-right">
           <span className="version-pill">V0.3</span>
+          <button className="subtle-button" onClick={() => setLayerPanelOpen((v) => !v)}>
+            {layerPanelOpen ? "Hide layers" : "Layers"}
+          </button>
           <button className="subtle-button" onClick={() => setHelpOpen((value) => !value)}>
             {helpOpen ? "Hide guide" : "Controls"}
           </button>
@@ -142,6 +161,57 @@ export function App() {
           </div>
         </div>
       </header>
+
+      {layerPanelOpen && gameRef.current?.layerPlugin && (
+        <div className="layer-panel" role="region" aria-label="Layer controls">
+          <div className="layer-panel-header">
+            <span className="layer-panel-title">Layers</span>
+            <button className="subtle-button" onClick={() => setLayerPanelOpen(false)}>Close</button>
+          </div>
+          <div className="layer-section">
+            <label className="layer-label">View mode</label>
+            <select
+              className="layer-select"
+              value={viewMode.type}
+              onChange={(e) => {
+                const mode = e.target.value as Extract<ViewMode, { type: string }>["type"];
+                layerPlugin?.setViewMode({ type: mode });
+              }}
+            >
+              <option value="all">All layers</option>
+              <option value="above-ground">Above ground</option>
+              <option value="underground">Underground</option>
+              <option value="current-layer">Current layer only</option>
+            </select>
+          </div>
+          <div className="layer-section">
+            <label className="layer-label">Active layer</label>
+            <span className="layer-active-value">{activeLayerId}</span>
+          </div>
+          <div className="layer-section">
+            <label className="layer-label">Visibility</label>
+            <div className="layer-list">
+              {layers.map((layer) => (
+                <div key={layer.id} className="layer-row">
+                  <label className="layer-checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={getLayerVisibility(layer.id)}
+                      onChange={(e) => layerPlugin?.setLayerVisibility(layer.id, e.target.checked)}
+                    />
+                    {layer.label}
+                  </label>
+                  <span className="layer-kind">{layer.kind}</span>
+                  <span className="layer-range">Y {layer.minY}–{layer.maxYExclusive}</span>
+                  <span className={layer.buildable ? "layer-tag buildable" : "layer-tag readonly"}>
+                    {layer.buildable ? "buildable" : "view only"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="game-stage">
         <GameCanvas

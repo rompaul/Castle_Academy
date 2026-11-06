@@ -65,6 +65,113 @@ kbd { min-width: 73px; padding: 5px 6px; color: #e8d39e; background: rgba(255,25
 .toast { position: absolute; top: 65px; left: 50%; transform: translateX(-50%); padding: 9px 14px; color: #f8f3e7; background: rgba(24,34,29,.86); border: 1px solid rgba(255,255,255,.18); font-size: 10px; pointer-events: none; }
 .footer { height: 36px; flex: 0 0 36px; display: flex; justify-content: space-between; align-items: center; padding: 0 26px; color: #8e9a8e; background: #1b2821; font: 8px 'DM Mono', monospace; letter-spacing: .1em; }
 .footer b { color: #d7bd80; font-weight: 500; }
+
+/* —— V0.4 Layer panel —— */
+.layer-panel {
+  position: absolute;
+  right: 34px;
+  top: 76px;
+  width: min(270px, calc(100vw - 70px));
+  padding: 14px;
+  background: var(--panel);
+  border: 1px solid rgba(238,224,181,.25);
+  box-shadow: 0 12px 35px rgba(0,0,0,.25);
+  z-index: 10;
+}
+.layer-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.layer-panel-title {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: .1em;
+  color: var(--cream);
+}
+.layer-section {
+  margin-bottom: 10px;
+}
+.layer-label {
+  display: block;
+  font-size: 8px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  letter-spacing: .08em;
+}
+.layer-select {
+  width: 100%;
+  font: inherit;
+  font-size: 9px;
+  padding: 6px 8px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.15);
+  color: var(--cream);
+}
+.layer-select:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+.layer-active-value {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--gold);
+}
+.layer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 9px;
+}
+.layer-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 9px;
+  color: #f4f1e7;
+  flex: 1;
+}
+.layer-checkbox-label input {
+  accent-color: var(--gold);
+  width: 14px;
+  height: 14px;
+}
+.layer-kind {
+  font-family: 'DM Mono', monospace;
+  font-size: 7px;
+  color: var(--muted);
+  margin-right: 6px;
+}
+.layer-range {
+  font-family: 'DM Mono', monospace;
+  font-size: 7px;
+  color: var(--muted);
+  margin-right: 6px;
+}
+.layer-tag {
+  font-size: 7px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: auto;
+}
+.layer-tag.buildable {
+  background: rgba(126,155,107,.15);
+  color: var(--green);
+  border: 1px solid rgba(126,155,107,.35);
+}
+.layer-tag.readonly {
+  background: rgba(181,185,170,.15);
+  color: var(--muted);
+  border: 1px solid rgba(181,185,170,.35);
+}
+
 @media (max-width: 700px) {
   .topbar { height: 62px; flex-basis: 62px; padding: 0 12px; }
   .brand-mark { width: 32px; height: 32px; }
