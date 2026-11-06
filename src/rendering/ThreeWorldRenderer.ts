@@ -29,6 +29,7 @@ export class ThreeWorldRenderer {
   private readonly blockMeshes = new Map<string, THREE.Mesh>();
   private lineStart: GridPosition | null = null;
   private fillStart: GridPosition | null = null;
+  private readonly unsubscribeLayerEvents = new Array<() => void>();
   private readonly geometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
   private readonly materials = new Map<BlockId, THREE.MeshStandardMaterial>();
   private readonly ground: THREE.Mesh;
@@ -65,6 +66,16 @@ export class ThreeWorldRenderer {
     }
     this.layerPlugin = layerPlugin ?? new LayerPlugin(this.events, registry);
     this.layerRenderAdapter = layerRenderAdapter ?? new LayerRenderAdapter(this.scene, this.layerPlugin);
+
+    // 订阅图层可见性与视图模式变化，更新 Three.js 场景显隐
+    this.unsubscribeLayerEvents.push(
+      this.events.on<{ layerId: string }>("layer.visibility.changed", (event) => {
+        this.layerRenderAdapter.applyLayerVisibility(event.payload.layerId);
+      }),
+      this.events.on("view.mode.changed", () => {
+        this.layerRenderAdapter.applyAllLayerVisibility();
+      })
+    );
 
     this.scene.background = new THREE.Color(0x9eb6b5);
     this.scene.fog = new THREE.Fog(0x9eb6b5, 24, 72);
@@ -367,6 +378,7 @@ export class ThreeWorldRenderer {
     this.renderer.domElement.removeEventListener("pointerdown", this.onPointerDown);
     this.renderer.domElement.removeEventListener("pointermove", this.onPointerMove);
     this.player.dispose();
+    this.unsubscribeLayerEvents.forEach((unsub) => unsub());
     if (import.meta.env.DEV) delete (window as Window & { __CASTLE_TEST__?: unknown }).__CASTLE_TEST__;
     this.scene.remove(this.ground, this.grid, this.outline);
     this.groundGeometry.dispose();
