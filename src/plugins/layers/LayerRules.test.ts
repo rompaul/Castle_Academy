@@ -72,6 +72,7 @@ function makeContext(
     activeLayerId: layers[0]?.id ?? "ground",
     visibilityByLayer: {},
     viewMode: { type: "all" },
+    section: { enabled: false, axis: "x", coordinate: 0, keptSide: "positive" },
   };
   return {
     definitions,

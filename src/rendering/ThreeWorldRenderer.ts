@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { WorldState } from "../core/world/WorldState";
 import { BLOCKS, type BlockId } from "../core/world/blocks";
-import { WORLD_BOUNDS, type GridPosition } from "../core/world/coordinates";
+import { WORLD_BOUNDS, type GridPosition, samePosition } from "../core/world/coordinates";
 import { PlayerController } from "../plugins/player-controller/PlayerController";
 import { BuildingPlugin } from "../plugins/building/BuildingPlugin";
 import { BuildingToolsPlugin } from "../plugins/building-tools/BuildingToolsPlugin";
@@ -10,6 +10,7 @@ import { MeasurementPlugin } from "../plugins/measurement/MeasurementPlugin";
 import { LayerPlugin } from "../plugins/layers/LayerPlugin";
 import { LayerRegistry } from "../plugins/layers/LayerRegistry";
 import { LayerRenderAdapter } from "./LayerRenderAdapter";
+import type { SectionViewState } from "../plugins/layers/LayerTypes";
 import { EventBus } from "../core/events/EventBus";
 
 const BLOCK_SIZE = 1;
@@ -74,6 +75,9 @@ export class ThreeWorldRenderer {
       }),
       this.events.on("view.mode.changed", () => {
         this.layerRenderAdapter.applyAllLayerVisibility();
+      }),
+      this.events.on<{ section: SectionViewState }>("section.view.changed", (event) => {
+        this.applySectionView(event.payload.section);
       })
     );
 
@@ -177,6 +181,7 @@ export class ThreeWorldRenderer {
     mesh.userData.position = position;
     mesh.userData.layerId = layerId;
     this.layerRenderAdapter.addMeshToLayer(mesh, layerId);
+    this.applySectionToMesh(mesh);
     this.blockMeshes.set(this.key(position), mesh);
     return true;
   }
@@ -216,6 +221,51 @@ export class ThreeWorldRenderer {
       this.blockMeshes.set(this.key(record.position), mesh);
     }
     this.layerRenderAdapter.applyAllLayerVisibility();
+    this.applySectionView(this.layerPlugin.getSectionView());
+  }
+
+  /** 根据当前剖面状态设置单个 mesh 的显隐。 */
+  private applySectionToMesh(mesh: THREE.Mesh): void {
+    const section = this.layerPlugin.getSectionView();
+    this.applySectionViewSingle(mesh, section);
+  }
+
+  /** 应用剖面状态到所有方块 mesh，并同步 outline/目标位置。 */
+  private applySectionView(section: SectionViewState): void {
+    let targetStillValid = false;
+    for (const mesh of this.blockMeshes.values()) {
+      const position = mesh.userData.position as GridPosition;
+      let keep = true;
+      if (section.enabled) {
+        if (section.axis === "x") {
+          keep = section.keptSide === "positive" ? position.x >= section.coordinate : position.x <= section.coordinate;
+        } else {
+          keep = section.keptSide === "positive" ? position.z >= section.coordinate : position.z <= section.coordinate;
+        }
+      }
+      mesh.visible = keep;
+      if (keep && this.targetPosition && samePosition(position, this.targetPosition)) {
+        targetStillValid = true;
+      }
+    }
+    if (this.targetPosition && !targetStillValid) {
+      this.targetPosition = null;
+      this.outline.visible = false;
+    }
+  }
+
+  /** 根据剖面状态设置单个 mesh 显隐。 */
+  private applySectionViewSingle(mesh: THREE.Mesh, section: SectionViewState): void {
+    const position = mesh.userData.position as GridPosition;
+    let keep = true;
+    if (section.enabled) {
+      if (section.axis === "x") {
+        keep = section.keptSide === "positive" ? position.x >= section.coordinate : position.x <= section.coordinate;
+      } else {
+        keep = section.keptSide === "positive" ? position.z >= section.coordinate : position.z <= section.coordinate;
+      }
+    }
+    mesh.visible = keep;
   }
 
   private readonly onPointerDown = (event: PointerEvent) => {

@@ -39,6 +39,7 @@ export interface LayerState {
   activeLayerId: string;
   visibilityByLayer: Record<string, boolean>;
   viewMode: ViewMode;
+  section: SectionViewState;
 }
 
 /** 剖面轴：X 或 Z 轴对齐切面。 */

@@ -1,7 +1,7 @@
 import { EventBus } from "../../core/events/EventBus";
 import { LayerRegistry } from "./LayerRegistry";
 import type { LayerDefinition } from "./LayerTypes";
-import type { LayerState, ViewMode } from "./LayerTypes";
+import type { LayerState, ViewMode, SectionViewState } from "./LayerTypes";
 import { resolveLayerId, isLayerVisible, isPositionVisible, getVisibleLayerIds, type LayerRulesContext } from "./LayerRules";
 
 /**
@@ -31,6 +31,7 @@ export class LayerPlugin {
       activeLayerId: registry.getDefaultLayerId() ?? "",
       visibilityByLayer: {},
       viewMode: { type: "all" },
+      section: { enabled: false, axis: "x", coordinate: 0, keptSide: "positive" },
       ...initialState,
     };
   }
@@ -151,6 +152,22 @@ export class LayerPlugin {
     this.events.emit("view.mode.changed", {
       previousMode: prev,
       mode,
+      timestamp: Date.now(),
+    });
+  }
+
+  /* ---------- Section view ---------- */
+
+  getSectionView(): SectionViewState {
+    return { ...this.state.section };
+  }
+
+  setSectionView(section: Partial<SectionViewState>): void {
+    const prev = { ...this.state.section };
+    this.state.section = { ...this.state.section, ...section };
+    this.events.emit("section.view.changed", {
+      previousSection: prev,
+      section: this.state.section,
       timestamp: Date.now(),
     });
   }

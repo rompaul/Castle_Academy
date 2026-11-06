@@ -98,6 +98,7 @@ describe("LayerTypes (V0.4 data contract)", () => {
       activeLayerId: "ground",
       visibilityByLayer: { ground: true, "level-1": true, "basement-1": false },
       viewMode: { type: "all" },
+      section: { enabled: false, axis: "x", coordinate: 0, keptSide: "positive" },
     };
     expect(state.activeLayerId).toBe("ground");
     expect(state.visibilityByLayer["ground"]).toBe(true);

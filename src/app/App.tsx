@@ -24,6 +24,7 @@ export function App() {
   const layers = layerPlugin ? layerPlugin.getAllLayers() : [];
   const activeLayerId = layerPlugin ? layerPlugin.getActiveLayerId() : "";
   const viewMode = layerPlugin ? layerPlugin.getViewMode() : { type: "all" };
+  const section = layerPlugin ? layerPlugin.getSectionView() : { enabled: false, axis: "x", coordinate: 0, keptSide: "positive" };
 
   const getLayerVisibility = (layerId: string): boolean => {
     const v = layerPlugin?.getLayerVisibility(layerId);
@@ -208,6 +209,67 @@ export function App() {
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+          <div className="layer-section">
+            <label className="layer-label">Section</label>
+            <div className="layer-row">
+              <label className="layer-checkbox-label" style={{ flex: 1 }}>
+                <input
+                  type="checkbox"
+                  checked={section.enabled}
+                  onChange={(e) => layerPlugin?.setSectionView({ enabled: e.target.checked })}
+                />
+                Enabled
+              </label>
+            </div>
+            <div className="layer-row">
+              <label className="layer-checkbox-label" style={{ flex: 1 }}>
+                <input
+                  type="checkbox"
+                  checked={section.axis === "x"}
+                  onChange={(e) => layerPlugin?.setSectionView({ axis: e.target.checked ? "x" : "z" })}
+                />
+                Axis X
+              </label>
+              <label className="layer-checkbox-label" style={{ flex: 1 }}>
+                <input
+                  type="checkbox"
+                  checked={section.axis === "z"}
+                  onChange={(e) => layerPlugin?.setSectionView({ axis: e.target.checked ? "z" : "x" })}
+                />
+                Axis Z
+              </label>
+            </div>
+            <div className="layer-row">
+              <label className="layer-checkbox-label" style={{ flex: 1 }}>
+                <input
+                  type="checkbox"
+                  checked={section.keptSide === "positive"}
+                  onChange={(e) => layerPlugin?.setSectionView({ keptSide: e.target.checked ? "positive" : "negative" })}
+                />
+                Keep +
+              </label>
+              <label className="layer-checkbox-label" style={{ flex: 1 }}>
+                <input
+                  type="checkbox"
+                  checked={section.keptSide === "negative"}
+                  onChange={(e) => layerPlugin?.setSectionView({ keptSide: e.target.checked ? "negative" : "positive" })}
+                />
+                Keep −
+              </label>
+            </div>
+            <div className="layer-row">
+              <input
+                type="number"
+                className="layer-select"
+                value={section.coordinate}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (Number.isInteger(v)) layerPlugin?.setSectionView({ coordinate: v });
+                }}
+                placeholder="coordinate"
+              />
             </div>
           </div>
         </div>
