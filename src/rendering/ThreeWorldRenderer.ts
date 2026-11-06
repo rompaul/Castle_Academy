@@ -404,7 +404,7 @@ export class ThreeWorldRenderer {
       const point = hit.point;
       this.targetPosition = {
         x: Math.floor(point.x + 0.5),
-        y: WORLD_BOUNDS.minY,
+        y: 0,
         z: Math.floor(point.z + 0.5)
       };
       this.outline.position.set(this.targetPosition.x, 0.5, this.targetPosition.z);
@@ -423,7 +423,7 @@ export class ThreeWorldRenderer {
     const hit = this.raycaster.intersectObjects([...visibleMeshes, this.ground], false)[0];
     if (!hit) return null;
     if (hit.object.userData.kind === "ground") {
-      return { x: this.targetPosition.x, y: WORLD_BOUNDS.minY, z: this.targetPosition.z };
+      return { x: this.targetPosition.x, y: 0, z: this.targetPosition.z };
     }
     const normal = hit.face?.normal.clone().transformDirection(hit.object.matrixWorld);
     if (!normal) return null;
