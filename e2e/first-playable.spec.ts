@@ -56,3 +56,25 @@ test("hotbar selection works by number key and button", async ({ page }) => {
   await page.getByRole("button", { name: "Select Brick" }).click();
   await expect(page.getByRole("button", { name: "Select Brick" })).toHaveAttribute("aria-pressed", "true");
 });
+
+test("places new V0.4.2 block IDs (foundation_concrete, window_frame, stair_stone)", async ({ page }) => {
+  await page.goto("/");
+  const initialCount = await page.evaluate(() => (window as any).__CASTLE_TEST__.getBlockCount());
+
+  // 新增块 ID 可正常放置
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.placeBlock(2, 1, 0, "foundation_concrete"))).toBe(true);
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(2, 1, 0))).toBe(true);
+
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.placeBlock(4, 1, 0, "window_frame"))).toBe(true);
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(4, 1, 0))).toBe(true);
+
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.placeBlock(6, 1, 0, "stair_stone"))).toBe(true);
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(6, 1, 0))).toBe(true);
+
+  // 重置后所有块应消失
+  await page.evaluate(() => (window as any).__CASTLE_TEST__.reset());
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.getBlockCount())).toBe(initialCount);
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(2, 1, 0))).toBe(false);
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(4, 1, 0))).toBe(false);
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(6, 1, 0))).toBe(false);
+});
