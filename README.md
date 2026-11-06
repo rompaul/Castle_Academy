@@ -1,4 +1,4 @@
-# Castle Academy — V0.1 First Playable
+# Castle Academy — V0.4 Underground Infrastructure
 
 A browser-based voxel building prototype built with React, TypeScript, Vite, and Three.js.
 
