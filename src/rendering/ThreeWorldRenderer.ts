@@ -61,9 +61,10 @@ export class ThreeWorldRenderer {
 
     const registry = new LayerRegistry();
     if (!layerPlugin) {
-      // 地下层：从 -4 向下到 -32，每层 4 个单位
+      // 地下层：basement-1 覆盖 [-4, 0)，往下到 WORLD_BOUNDS.minY (-32)
+      registry.register({ id: "basement-1", label: "Basement 1", kind: "basement", minY: -4, maxYExclusive: 0, order: -1, defaultVisible: true, buildable: true });
       for (let y = -4; y > WORLD_BOUNDS.minY; y -= 4) {
-        const index = Math.abs(y / 4);
+        const index = Math.abs(y / 4) + 1;
         registry.register({
           id: `basement-${index}`,
           label: `Basement ${index}`,
@@ -75,16 +76,17 @@ export class ThreeWorldRenderer {
           buildable: true,
         });
       }
-      // 地上层：从 0 向上到 64，每层 4 个单位
-      for (let y = 0; y < WORLD_BOUNDS.maxYExclusive; y += 4) {
-        const index = y / 4 + 1;
+      // 地上层：ground 覆盖 [0, 4)，往上到 WORLD_BOUNDS.maxYExclusive (64)
+      registry.register({ id: "ground", label: "Ground", kind: "ground-floor", minY: 0, maxYExclusive: 4, order: 0, defaultVisible: true, buildable: true });
+      for (let y = 4; y < WORLD_BOUNDS.maxYExclusive; y += 4) {
+        const index = y / 4;
         registry.register({
           id: `level-${index}`,
           label: `Level ${index}`,
-          kind: index === 1 ? "ground-floor" : "upper-floor",
+          kind: "upper-floor",
           minY: y,
           maxYExclusive: y + 4,
-          order: index - 1,
+          order: index,
           defaultVisible: true,
           buildable: true,
         });
@@ -159,13 +161,19 @@ export class ThreeWorldRenderer {
     if (import.meta.env.DEV) {
       Object.assign(window, {
         __CASTLE_TEST__: {
+          layerPlugin: this.layerPlugin,
           getBlockCount: () => this.world.size,
           hasBlock: (x: number, y: number, z: number) => this.world.has({ x, y, z }),
           placeBlock: (x: number, y: number, z: number, blockId: BlockId) => this.addBlock({ x, y, z }, blockId),
           removeBlock: (x: number, y: number, z: number) => this.removeBlock({ x, y, z }),
           reset: () => this.reset(),
           getPlayerPosition: () => this.player.camera.position.toArray(),
-          setPlayerPosition: (x: number, y: number, z: number) => this.player.camera.position.set(x, y, z)
+          setPlayerPosition: (x: number, y: number, z: number) => this.player.camera.position.set(x, y, z),
+          getLayerVisibility: (layerId: string) => this.layerPlugin.getLayerVisibility(layerId),
+          getSectionView: () => this.layerPlugin.getSectionView(),
+          setLayerVisibility: (layerId: string, visible: boolean) => this.layerPlugin.setLayerVisibility(layerId, visible),
+          setSectionView: (section: { enabled?: boolean; axis?: "x" | "y" | "z"; coordinate?: number; keptSide?: "positive" | "negative" }) =>
+            this.layerPlugin.setSectionView(section)
         }
       });
     }

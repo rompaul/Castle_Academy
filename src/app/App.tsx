@@ -195,7 +195,7 @@ export function App() {
           <div className="layer-section">
             <label className="layer-label">Layers</label>
             <div className="layer-icons">
-              <label className={`layer-icon ${groundVisible ? "active" : ""}`}>
+              <label className={`layer-icon ${groundVisible ? "active" : ""}`} title="Ground">
                 <input
                   type="checkbox"
                   checked={groundVisible}
@@ -205,7 +205,7 @@ export function App() {
                 <Home size={16} />
                 <span className="layer-icon-label">Ground</span>
               </label>
-              <label className={`layer-icon ${undergroundVisible ? "active" : ""}`}>
+              <label className={`layer-icon ${undergroundVisible ? "active" : ""}`} title="Underground">
                 <input
                   type="checkbox"
                   checked={undergroundVisible}
