@@ -5,6 +5,7 @@ import type { GameActions } from "../rendering/GameCanvas";
 import { BLOCKS, type BlockId } from "../core/world/blocks";
 import { Hotbar } from "../ui/Hotbar";
 import { HelpPanel } from "../ui/HelpPanel";
+import type { ViewMode, SectionViewState } from "../plugins/layers/LayerTypes";
 
 export function App() {
   const [selectedBlock, setSelectedBlock] = useState<BlockId>("grass");
@@ -21,8 +22,24 @@ export function App() {
   const toastTimerRef = useRef<number | null>(null);
 
   const layerPlugin = gameRef.current?.layerPlugin;
-  const viewMode = layerPlugin ? layerPlugin.getViewMode() : { type: "all" };
-  const section = layerPlugin ? layerPlugin.getSectionView() : { enabled: false, axis: "x", coordinate: 0, keptSide: "positive" };
+  const [viewModeState, setViewModeState] = useState<ViewMode>(() =>
+    layerPlugin ? layerPlugin.getViewMode() : { type: "all" }
+  );
+  const [sectionState, setSectionState] = useState<SectionViewState>(() =>
+    layerPlugin ? layerPlugin.getSectionView() : { enabled: false, axis: "x", coordinate: 0, keptSide: "positive" }
+  );
+
+  // 订阅 LayerPlugin 状态变更，驱动 UI 重新渲染（图标 active 状态等）
+  useEffect(() => {
+    const lp = gameRef.current?.layerPlugin;
+    if (!lp) return;
+    const unsub1 = lp.onViewModeChange?.((mode: ViewMode) => setViewModeState(mode));
+    const unsub2 = lp.onSectionChange?.((section: SectionViewState) => setSectionState(section));
+    return () => {
+      unsub1();
+      unsub2();
+    };
+  }, [gameRef.current]);
 
   const showMessage = useCallback((text: string) => {
     setMessage(text);
@@ -164,7 +181,7 @@ export function App() {
             <label className="layer-label">Layers</label>
             <div className="layer-icons">
               <button
-                className={`layer-icon ${viewMode.type === "above-ground" ? "active" : ""}`}
+                className={`layer-icon ${viewModeState.type === "above-ground" ? "active" : ""}`}
                 onClick={() => layerPlugin?.setViewMode({ type: "above-ground" })}
                 title="Ground"
               >
@@ -172,7 +189,7 @@ export function App() {
                 <span className="layer-icon-label">Ground</span>
               </button>
               <button
-                className={`layer-icon ${viewMode.type === "underground" ? "active" : ""}`}
+                className={`layer-icon ${viewModeState.type === "underground" ? "active" : ""}`}
                 onClick={() => layerPlugin?.setViewMode({ type: "underground" })}
                 title="Underground"
               >
@@ -189,7 +206,7 @@ export function App() {
               <label className="layer-checkbox-label" style={{ flex: 1 }}>
                 <input
                   type="checkbox"
-                  checked={section.enabled}
+                  checked={sectionState.enabled}
                   onChange={(e) => layerPlugin?.setSectionView({ enabled: e.target.checked })}
                 />
                 Enabled
@@ -197,7 +214,7 @@ export function App() {
             </div>
             <div className="layer-icons">
               <button
-                className={`layer-icon ${section.axis === "x" ? "active" : ""}`}
+                className={`layer-icon ${sectionState.axis === "x" ? "active" : ""}`}
                 onClick={() => layerPlugin?.setSectionView({ axis: "x" })}
                 title="Axis X"
               >
@@ -205,7 +222,7 @@ export function App() {
                 <span className="layer-icon-label">Axis X</span>
               </button>
               <button
-                className={`layer-icon ${section.axis === "y" ? "active" : ""}`}
+                className={`layer-icon ${sectionState.axis === "y" ? "active" : ""}`}
                 onClick={() => layerPlugin?.setSectionView({ axis: "y" })}
                 title="Axis Y"
               >
@@ -213,7 +230,7 @@ export function App() {
                 <span className="layer-icon-label">Axis Y</span>
               </button>
               <button
-                className={`layer-icon ${section.axis === "z" ? "active" : ""}`}
+                className={`layer-icon ${sectionState.axis === "z" ? "active" : ""}`}
                 onClick={() => layerPlugin?.setSectionView({ axis: "z" })}
                 title="Axis Z"
               >
@@ -225,7 +242,7 @@ export function App() {
               <input
                 type="number"
                 className="layer-select"
-                value={section.coordinate}
+                value={sectionState.coordinate}
                 onChange={(e) => {
                   const v = Number(e.target.value);
                   if (Number.isInteger(v)) layerPlugin?.setSectionView({ coordinate: v });
@@ -237,7 +254,7 @@ export function App() {
               <label className="layer-checkbox-label" style={{ flex: 1 }}>
                 <input
                   type="checkbox"
-                  checked={section.keptSide === "positive"}
+                  checked={sectionState.keptSide === "positive"}
                   onChange={(e) => layerPlugin?.setSectionView({ keptSide: e.target.checked ? "positive" : "negative" })}
                 />
                 Keep +
@@ -245,7 +262,7 @@ export function App() {
               <label className="layer-checkbox-label" style={{ flex: 1 }}>
                 <input
                   type="checkbox"
-                  checked={section.keptSide === "negative"}
+                  checked={sectionState.keptSide === "negative"}
                   onChange={(e) => layerPlugin?.setSectionView({ keptSide: e.target.checked ? "negative" : "positive" })}
                 />
                 Keep −

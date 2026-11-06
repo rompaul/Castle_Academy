@@ -156,6 +156,13 @@ export class LayerPlugin {
     });
   }
 
+  /** 订阅视图模式变更，返回取消订阅函数。 */
+  onViewModeChange(handler: (mode: ViewMode) => void): () => void {
+    return this.events.on<{ mode: ViewMode }>("view.mode.changed", (event) => {
+      handler(event.payload.mode);
+    });
+  }
+
   /* ---------- Section view ---------- */
 
   getSectionView(): SectionViewState {
@@ -169,6 +176,13 @@ export class LayerPlugin {
       previousSection: prev,
       section: this.state.section,
       timestamp: Date.now(),
+    });
+  }
+
+  /** 订阅剖面视图变更，返回取消订阅函数。 */
+  onSectionChange(handler: (section: SectionViewState) => void): () => void {
+    return this.events.on<{ section: SectionViewState }>("section.view.changed", (event) => {
+      handler(event.payload.section);
     });
   }
 
