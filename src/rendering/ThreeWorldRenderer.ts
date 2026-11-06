@@ -7,6 +7,9 @@ import { BuildingPlugin } from "../plugins/building/BuildingPlugin";
 import { BuildingToolsPlugin } from "../plugins/building-tools/BuildingToolsPlugin";
 import { BlueprintPlugin } from "../plugins/blueprint/BlueprintPlugin";
 import { MeasurementPlugin } from "../plugins/measurement/MeasurementPlugin";
+import { LayerPlugin } from "../plugins/layers/LayerPlugin";
+import { LayerRegistry } from "../plugins/layers/LayerRegistry";
+import { LayerRenderAdapter } from "./LayerRenderAdapter";
 import { EventBus } from "../core/events/EventBus";
 
 const BLOCK_SIZE = 1;
@@ -21,6 +24,8 @@ export class ThreeWorldRenderer {
   readonly blueprint = new BlueprintPlugin(this.world, this.events);
   readonly measurement = new MeasurementPlugin();
   readonly player: PlayerController;
+  readonly layerPlugin: LayerPlugin;
+  readonly layerRenderAdapter: LayerRenderAdapter;
   private readonly blockMeshes = new Map<string, THREE.Mesh>();
   private lineStart: GridPosition | null = null;
   private fillStart: GridPosition | null = null;
@@ -38,7 +43,12 @@ export class ThreeWorldRenderer {
   private previousTime = 0;
   private disposed = false;
 
-  constructor(private readonly host: HTMLElement, private readonly onMessage: (text: string) => void) {
+  constructor(
+    private readonly host: HTMLElement,
+    private readonly onMessage: (text: string) => void,
+    layerPlugin?: LayerPlugin,
+    layerRenderAdapter?: LayerRenderAdapter
+  ) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
@@ -46,6 +56,9 @@ export class ThreeWorldRenderer {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.setClearColor(0x9eb6b5);
     this.host.appendChild(this.renderer.domElement);
+
+    this.layerPlugin = layerPlugin ?? new LayerPlugin(this.events, new LayerRegistry());
+    this.layerRenderAdapter = layerRenderAdapter ?? new LayerRenderAdapter(this.scene, this.layerPlugin);
 
     this.scene.background = new THREE.Color(0x9eb6b5);
     this.scene.fog = new THREE.Fog(0x9eb6b5, 24, 72);
@@ -138,13 +151,15 @@ export class ThreeWorldRenderer {
 
   private addBlock(position: GridPosition, blockId: BlockId): boolean {
     if (!this.building.place(position, blockId)) return false;
+    const layerId = this.layerPlugin.resolveLayerId(position.y) ?? this.layerPlugin.getDefaultLayerId() ?? "ground";
     const mesh = new THREE.Mesh(this.geometry, this.materials.get(blockId)!);
     mesh.position.set(position.x, position.y + 0.5, position.z);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.userData.kind = "block";
     mesh.userData.position = position;
-    this.scene.add(mesh);
+    mesh.userData.layerId = layerId;
+    this.layerRenderAdapter.addMeshToLayer(mesh, layerId);
     this.blockMeshes.set(this.key(position), mesh);
     return true;
   }
@@ -152,14 +167,21 @@ export class ThreeWorldRenderer {
   private removeBlock(position: GridPosition): boolean {
     if (!this.building.remove(position)) return false;
     const mesh = this.blockMeshes.get(this.key(position));
-    if (mesh) this.scene.remove(mesh);
+    if (mesh) {
+      const layerId = mesh.userData.layerId as string | undefined;
+      if (layerId) {
+        this.layerRenderAdapter.removeMeshFromLayer(mesh, layerId);
+      } else {
+        this.scene.remove(mesh);
+      }
+    }
     this.blockMeshes.delete(this.key(position));
     return true;
   }
 
   /** Rebuild all block meshes from the current world state (used after load). */
   reloadFromWorld(): void {
-    for (const mesh of this.blockMeshes.values()) this.scene.remove(mesh);
+    this.layerRenderAdapter.removeAllGroups();
     this.blockMeshes.clear();
     this.targetPosition = null;
     this.outline.visible = false;
@@ -171,9 +193,12 @@ export class ThreeWorldRenderer {
       mesh.receiveShadow = true;
       mesh.userData.kind = "block";
       mesh.userData.position = record.position;
-      this.scene.add(mesh);
+      const layerId = this.layerPlugin.resolveLayerId(record.position.y) ?? this.layerPlugin.getDefaultLayerId() ?? "ground";
+      mesh.userData.layerId = layerId;
+      this.layerRenderAdapter.addMeshToLayer(mesh, layerId);
       this.blockMeshes.set(this.key(record.position), mesh);
     }
+    this.layerRenderAdapter.applyAllLayerVisibility();
   }
 
   private readonly onPointerDown = (event: PointerEvent) => {
@@ -245,7 +270,12 @@ export class ThreeWorldRenderer {
       );
     }
     this.raycaster.setFromCamera(this.pointer, this.player.camera);
-    const targets = [...this.blockMeshes.values(), this.ground];
+    const visibleMeshes = [...this.blockMeshes.values()].filter((mesh) => {
+      const layerId = mesh.userData.layerId as string | undefined;
+      if (!layerId) return true;
+      return this.layerPlugin.isLayerEffectivelyVisible(layerId);
+    });
+    const targets = [...visibleMeshes, this.ground];
     const hit = this.raycaster.intersectObjects(targets, false)[0];
     if (!hit) {
       this.targetPosition = null;
@@ -273,7 +303,12 @@ export class ThreeWorldRenderer {
   private adjacentPosition(): GridPosition | null {
     if (!this.targetPosition) return null;
     // Placement on a selected block uses the face normal cached by raycast.
-    const hit = this.raycaster.intersectObjects([...this.blockMeshes.values(), this.ground], false)[0];
+    const visibleMeshes = [...this.blockMeshes.values()].filter((mesh) => {
+      const layerId = mesh.userData.layerId as string | undefined;
+      if (!layerId) return true;
+      return this.layerPlugin.isLayerEffectivelyVisible(layerId);
+    });
+    const hit = this.raycaster.intersectObjects([...visibleMeshes, this.ground], false)[0];
     if (!hit) return null;
     if (hit.object.userData.kind === "ground") {
       return { x: this.targetPosition.x, y: 0, z: this.targetPosition.z };
