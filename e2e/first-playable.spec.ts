@@ -57,6 +57,16 @@ test("hotbar selection works by number key and button", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Select Brick" })).toHaveAttribute("aria-pressed", "true");
 });
 
+test("right-click removes a placed block", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => (window as any).__CASTLE_TEST__.placeBlock(0, 1, 0, "brick"));
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(0, 1, 0))).toBe(true);
+
+  // 右键移除
+  await page.evaluate(() => (window as any).__CASTLE_TEST__.removeBlock(0, 1, 0));
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(0, 1, 0))).toBe(false);
+});
+
 test("places new V0.4.2 block IDs (foundation_concrete, window_frame, stair_stone)", async ({ page }) => {
   await page.goto("/");
   const initialCount = await page.evaluate(() => (window as any).__CASTLE_TEST__.getBlockCount());
