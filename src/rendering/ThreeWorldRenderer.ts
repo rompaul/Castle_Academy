@@ -362,8 +362,7 @@ export class ThreeWorldRenderer {
 
       // Default: place a single block.
       this.addBlock(position, blockId);
-    } else if (event.button === 2) {
-      this.removeBlock(this.targetPosition);
+      return;
     }
   };
 
