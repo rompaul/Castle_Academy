@@ -124,9 +124,27 @@ export class PlayerController {
   }
 
   private collides(x: number, eyeY: number, z: number): boolean {
-    return this.world.all().some((block) => playerIntersectsBlock(
-      x, eyeY, z, block.position.x, block.position.y, block.position.z
-    ));
+    const feetY = eyeY - PLAYER_EYE_HEIGHT;
+    const headY = eyeY + PLAYER_HEAD_CLEARANCE;
+    // 只检查玩家附近的方块，而非遍历全部方块：水平范围 = 玩家半径 + 方块半宽；垂直范围 = 脚到头 + 方块高度缓冲
+    const radius = PLAYER_RADIUS + 0.5;
+    const minX = Math.floor(x - radius);
+    const maxX = Math.floor(x + radius);
+    const minZ = Math.floor(z - radius);
+    const maxZ = Math.floor(z + radius);
+    const minY = Math.floor(feetY - 1);
+    const maxY = Math.floor(headY + 1);
+    for (let iy = minY; iy <= maxY; iy++) {
+      for (let ix = minX; ix <= maxX; ix++) {
+        for (let iz = minZ; iz <= maxZ; iz++) {
+          const block = this.world.get({ x: ix, y: iy, z: iz });
+          if (block && playerIntersectsBlock(x, eyeY, z, block.position.x, block.position.y, block.position.z)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 
   private updateLook(): void {

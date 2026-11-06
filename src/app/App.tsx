@@ -28,6 +28,16 @@ export function App() {
     layerPlugin ? layerPlugin.getSectionView() : { enabled: false, axis: "x", coordinate: 0, keptSide: "positive" }
   );
 
+  // 从 LayerPlugin 同步实际图层可见性到 UI state（首次挂载及刷新后）
+  useEffect(() => {
+    const lp = gameRef.current?.layerPlugin;
+    if (!lp) return;
+    const groundOn = lp.getAllLayers().some((l) => l.minY >= 0 && (lp.getLayerVisibility(l.id) ?? l.defaultVisible ?? true));
+    const underOn = lp.getAllLayers().some((l) => l.maxYExclusive <= 0 && (lp.getLayerVisibility(l.id) ?? l.defaultVisible ?? true));
+    setGroundVisible(groundOn);
+    setUndergroundVisible(underOn);
+  }, [gameRef.current]);
+
   const handleGroundChange = (checked: boolean) => {
     setGroundVisible(checked);
     const lp = gameRef.current?.layerPlugin;
@@ -51,6 +61,22 @@ export function App() {
     const lp = gameRef.current?.layerPlugin;
     if (!lp) return;
     const unsub = lp.onSectionChange?.((section: SectionViewState) => setSectionState(section));
+    return () => {
+      unsub();
+    };
+  }, [gameRef.current]);
+
+  // 订阅图层可见性变更，驱动 UI 按钮状态同步
+  useEffect(() => {
+    const lp = gameRef.current?.layerPlugin;
+    if (!lp) return;
+    const unsub = lp.onVisibilityChange?.(() => {
+      const allLayers = lp.getAllLayers();
+      const groundOn = allLayers.some((l) => l.minY >= 0 && (lp.getLayerVisibility(l.id) ?? l.defaultVisible ?? true));
+      const underOn = allLayers.some((l) => l.maxYExclusive <= 0 && (lp.getLayerVisibility(l.id) ?? l.defaultVisible ?? true));
+      setGroundVisible(groundOn);
+      setUndergroundVisible(underOn);
+    });
     return () => {
       unsub();
     };

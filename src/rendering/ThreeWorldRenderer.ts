@@ -10,7 +10,7 @@ import { MeasurementPlugin } from "../plugins/measurement/MeasurementPlugin";
 import { LayerPlugin } from "../plugins/layers/LayerPlugin";
 import { LayerRegistry } from "../plugins/layers/LayerRegistry";
 import { LayerRenderAdapter } from "./LayerRenderAdapter";
-import type { SectionViewState } from "../plugins/layers/LayerTypes";
+import type { LayerKind, SectionViewState } from "../plugins/layers/LayerTypes";
 import { EventBus } from "../core/events/EventBus";
 
 const BLOCK_SIZE = 1;
@@ -62,13 +62,17 @@ export class ThreeWorldRenderer {
     const registry = new LayerRegistry();
     if (!layerPlugin) {
       // 地下层：basement-1 覆盖 [-4, 0)，往下到 WORLD_BOUNDS.minY (-32)
+      // 根据深度分配 kind：浅层 basement，中层 foundation，深层 passage
       registry.register({ id: "basement-1", label: "Basement 1", kind: "basement", minY: -4, maxYExclusive: 0, order: -1, defaultVisible: true, buildable: true });
       for (let y = -4; y > WORLD_BOUNDS.minY; y -= 4) {
         const index = Math.abs(y / 4) + 1;
+        let kind: LayerKind = "basement";
+        if (y <= -4 && y > -12) kind = "foundation";
+        if (y <= -12) kind = "passage";
         registry.register({
           id: `basement-${index}`,
           label: `Basement ${index}`,
-          kind: "basement",
+          kind,
           minY: y - 4,
           maxYExclusive: y,
           order: -index,
@@ -105,6 +109,10 @@ export class ThreeWorldRenderer {
       }),
       this.events.on<{ section: SectionViewState }>("section.view.changed", (event) => {
         this.applySectionView(event.payload.section);
+      }),
+      // 蓝图放置后重新渲染，确保 Renderer 与 WorldState 同步
+      this.events.on("world.blueprint.placed", () => {
+        this.reloadFromWorld();
       })
     );
 
@@ -296,6 +304,8 @@ export class ThreeWorldRenderer {
     if (section.enabled) {
       if (section.axis === "x") {
         keep = section.keptSide === "positive" ? position.x >= section.coordinate : position.x <= section.coordinate;
+      } else if (section.axis === "y") {
+        keep = section.keptSide === "positive" ? position.y >= section.coordinate : position.y <= section.coordinate;
       } else {
         keep = section.keptSide === "positive" ? position.z >= section.coordinate : position.z <= section.coordinate;
       }
@@ -394,7 +404,7 @@ export class ThreeWorldRenderer {
       const point = hit.point;
       this.targetPosition = {
         x: Math.floor(point.x + 0.5),
-        y: 1,
+        y: WORLD_BOUNDS.minY,
         z: Math.floor(point.z + 0.5)
       };
       this.outline.position.set(this.targetPosition.x, 0.5, this.targetPosition.z);
@@ -413,7 +423,7 @@ export class ThreeWorldRenderer {
     const hit = this.raycaster.intersectObjects([...visibleMeshes, this.ground], false)[0];
     if (!hit) return null;
     if (hit.object.userData.kind === "ground") {
-      return { x: this.targetPosition.x, y: 1, z: this.targetPosition.z };
+      return { x: this.targetPosition.x, y: WORLD_BOUNDS.minY, z: this.targetPosition.z };
     }
     const normal = hit.face?.normal.clone().transformDirection(hit.object.matrixWorld);
     if (!normal) return null;
@@ -444,7 +454,14 @@ export class ThreeWorldRenderer {
   reset(): void {
     for (const record of this.world.all()) {
       const mesh = this.blockMeshes.get(this.key(record.position));
-      if (mesh) this.scene.remove(mesh);
+      if (mesh) {
+        const layerId = mesh.userData.layerId as string | undefined;
+        if (layerId) {
+          this.layerRenderAdapter.removeMeshFromLayer(mesh, layerId);
+        } else {
+          this.scene.remove(mesh);
+        }
+      }
     }
     this.world.clear();
     this.blockMeshes.clear();

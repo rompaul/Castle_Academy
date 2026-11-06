@@ -163,6 +163,13 @@ export class LayerPlugin {
     });
   }
 
+  /** 订阅图层可见性变更，返回取消订阅函数。 */
+  onVisibilityChange(handler: (layerId: string, visible: boolean) => void): () => void {
+    return this.events.on<{ layerId: string; visible: boolean }>("layer.visibility.changed", (event) => {
+      handler(event.payload.layerId, event.payload.visible);
+    });
+  }
+
   /* ---------- Section view ---------- */
 
   getSectionView(): SectionViewState {

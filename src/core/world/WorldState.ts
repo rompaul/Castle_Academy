@@ -16,7 +16,7 @@ const SNAPSHOT_VERSION = 1;
 const VALID_BLOCK_IDS = new Set<string>(BLOCKS.map((block) => block.id));
 
 export class WorldState {
-  private readonly blocks = new Map<string, BlockRecord>();
+  private blocks = new Map<string, BlockRecord>();
 
   get(position: GridPosition): BlockRecord | undefined {
     if (!isInsideBuildArea(position)) return undefined;
@@ -69,14 +69,17 @@ export class WorldState {
     if (snapshot.version !== SNAPSHOT_VERSION || !Array.isArray(snapshot.blocks)) {
       return false;
     }
-    this.clear();
+    // 先验证所有方块，不修改原世界；任何一块非法即整体失败，保持原子性
+    const nextBlocks = new Map<string, BlockRecord>();
     for (const block of snapshot.blocks) {
       const position: GridPosition = { x: block.x, y: block.y, z: block.z };
       if (!isInsideBuildArea(position) || !VALID_BLOCK_IDS.has(block.blockId)) {
         return false;
       }
-      this.blocks.set(positionKey(position), { position: { ...position }, blockId: block.blockId });
+      nextBlocks.set(positionKey(position), { position: { ...position }, blockId: block.blockId });
     }
+    // 全部验证通过后再替换原世界
+    this.blocks = nextBlocks;
     return true;
   }
 }

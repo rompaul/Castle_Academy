@@ -125,13 +125,49 @@ export class PersistencePlugin {
     }
   }
 
-  /** Load previously saved layer/section view state. Returns null if none. */
+  /** Load previously saved layer/section view state. Returns null if none or data is invalid. */
   loadViewState(): Record<string, unknown> | null {
     if (!this.active || !this.config.enabled) return null;
     try {
       const raw = this.storage?.getItem(this.config.storageKeyView);
       if (!raw) return null;
-      return JSON.parse(raw) as Record<string, unknown>;
+      const record = JSON.parse(raw) as Record<string, unknown>;
+      if (!record || typeof record !== "object" || Array.isArray(record)) return null;
+
+      // 验证 visibilityByLayer：如存在必须是 Record<string, boolean>
+      const vblRaw = record.visibilityByLayer;
+      if (vblRaw !== undefined) {
+        if (typeof vblRaw !== "object" || vblRaw === null || Array.isArray(vblRaw)) return null;
+        const vbl = vblRaw as Record<string, unknown>;
+        for (const key in vbl) {
+          if (typeof vbl[key] !== "boolean") return null;
+        }
+      }
+
+      // 验证 viewMode：如存在必须是 { type: "all" | "above-ground" | "underground" | "current-layer" | "custom" }
+      const vmRaw = record.viewMode;
+      if (vmRaw !== undefined) {
+        if (typeof vmRaw !== "object" || vmRaw === null || Array.isArray(vmRaw)) return null;
+        const vm = vmRaw as { type?: unknown };
+        const vmType = vm.type as string | undefined;
+        const validTypes = ["all", "above-ground", "underground", "current-layer", "custom"];
+        if (typeof vmType !== "string" || !validTypes.includes(vmType)) return null;
+      }
+
+      // 验证 section：如存在必须是 { enabled?: boolean, axis?: "x"|"y"|"z", coordinate?: number, keptSide?: "positive"|"negative" }
+      const secRaw = record.section;
+      if (secRaw !== undefined) {
+        if (typeof secRaw !== "object" || secRaw === null || Array.isArray(secRaw)) return null;
+        const sec = secRaw as { enabled?: unknown; axis?: unknown; coordinate?: unknown; keptSide?: unknown };
+        if (sec.enabled !== undefined && typeof sec.enabled !== "boolean") return null;
+        const secAxis = sec.axis as string | undefined;
+        if (secAxis !== undefined && !["x", "y", "z"].includes(secAxis)) return null;
+        if (sec.coordinate !== undefined && typeof sec.coordinate !== "number") return null;
+        const secKept = sec.keptSide as string | undefined;
+        if (secKept !== undefined && !["positive", "negative"].includes(secKept)) return null;
+      }
+
+      return record;
     } catch {
       return null;
     }
