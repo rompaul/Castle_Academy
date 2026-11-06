@@ -9,6 +9,7 @@ import type { BuildingToolsPlugin } from "../plugins/building-tools/BuildingTool
 import type { BlueprintPlugin } from "../plugins/blueprint/BlueprintPlugin";
 import type { MeasurementPlugin } from "../plugins/measurement/MeasurementPlugin";
 import type { LayerPlugin } from "../plugins/layers/LayerPlugin";
+import type { ViewMode, SectionViewState } from "../plugins/layers/LayerTypes";
 
 export interface GameActions {
   reset: () => void;
@@ -57,8 +58,27 @@ export function GameCanvas({ selectedBlock, onPlayingChange, onMessage, onPersis
       persistence.loadWorld();
     }
 
-    onPersistenceReady?.();
+    // Restore layer/section view state so visibility/mode/section survive refresh (V0.4).
+    const savedView = persistence.loadViewState();
+    if (savedView) {
+      const visibilityByLayer = savedView.visibilityByLayer as Record<string, boolean> | undefined;
+      if (visibilityByLayer) {
+        for (const layerId of Object.keys(visibilityByLayer)) {
+          engine.layerPlugin.setLayerVisibility(layerId, visibilityByLayer[layerId]);
+        }
+      }
+      const viewMode = savedView.viewMode as ViewMode | undefined;
+      if (viewMode) {
+        engine.layerPlugin.setViewMode(viewMode);
+      }
+      const section = savedView.section as Partial<SectionViewState> | undefined;
+      if (section) {
+        engine.layerPlugin.setSectionView(section);
+      }
+    }
 
+    // Expose gameRef BEFORE onPersistenceReady so App can read persistence state
+    // (e.g. hasSavedWorld) when the ready callback fires.
     gameRef.current = {
       reset: () => engine.reset(),
       requestPointerLock: () => engine.player.requestPointerLock(),
@@ -72,10 +92,31 @@ export function GameCanvas({ selectedBlock, onPlayingChange, onMessage, onPersis
       reloadFromWorld: () => engine.reloadFromWorld()
     };
 
+    // Persist layer/section view state whenever it changes (V0.4).
+    const persistViewState = () => {
+      const visibilityByLayer: Record<string, boolean> = {};
+      for (const layer of engine.layerPlugin.getAllLayers()) {
+        visibilityByLayer[layer.id] = engine.layerPlugin.getLayerVisibility(layer.id) ?? false;
+      }
+      persistence.saveViewState({
+        visibilityByLayer,
+        viewMode: engine.layerPlugin.getViewMode(),
+        section: engine.layerPlugin.getSectionView()
+      });
+    };
+    const unsubscribeViewState = [
+      engine.events.on("layer.visibility.changed", persistViewState),
+      engine.events.on("view.mode.changed", persistViewState),
+      engine.events.on("section.view.changed", persistViewState)
+    ];
+
+    onPersistenceReady?.();
+
     const onPointerLock = () => onPlayingChange(document.pointerLockElement === engine.renderer.domElement);
     document.addEventListener("pointerlockchange", onPointerLock);
 
     return () => {
+      unsubscribeViewState.forEach((unsub) => unsub());
       document.removeEventListener("pointerlockchange", onPointerLock);
       engine.buildingTools.dispose();
       engine.blueprint.dispose();

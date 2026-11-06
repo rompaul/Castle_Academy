@@ -33,7 +33,7 @@ function makeWorldWithBlocks() {
 function makePlugin(store: Store, world?: WorldState) {
   const w = world ?? new WorldState();
   const events = new EventBus();
-  const plugin = new PersistencePlugin(w, events, { storageKey: "test-world", enabled: true }, store);
+  const plugin = new PersistencePlugin(w, events, { storageKey: "test-world", storageKeyView: "test-view", enabled: true }, store);
   return { world: w, events, plugin };
 }
 
@@ -59,13 +59,13 @@ describe("PersistencePlugin", () => {
     const store = new MapStorage();
     const source = makeWorldWithBlocks();
     const sourceEvents = new EventBus();
-    const sourcePlugin = new PersistencePlugin(source, sourceEvents, { storageKey: "shared", enabled: true }, store);
+    const sourcePlugin = new PersistencePlugin(source, sourceEvents, { storageKey: "shared", storageKeyView: "shared-view", enabled: true }, store);
     sourcePlugin.activate();
     expect(sourcePlugin.saveWorld()).toBe(true);
 
     const target = new WorldState();
     const targetEvents = new EventBus();
-    const targetPlugin = new PersistencePlugin(target, targetEvents, { storageKey: "shared", enabled: true }, store);
+    const targetPlugin = new PersistencePlugin(target, targetEvents, { storageKey: "shared", storageKeyView: "shared-view", enabled: true }, store);
     targetPlugin.activate();
 
     let reloadCalled = false;
@@ -89,7 +89,7 @@ describe("PersistencePlugin", () => {
     const store = new MapStorage();
     const world = makeWorldWithBlocks();
     const events = new EventBus();
-    const plugin = new PersistencePlugin(world, events, { storageKey: "corrupt", enabled: true }, store);
+    const plugin = new PersistencePlugin(world, events, { storageKey: "corrupt", storageKeyView: "corrupt-view", enabled: true }, store);
     plugin.activate();
     const before = world.serialize();
 
@@ -119,7 +119,7 @@ describe("PersistencePlugin", () => {
 
     const world2 = new WorldState();
     const events2 = new EventBus();
-    const plugin2 = new PersistencePlugin(world2, events2, { storageKey: "test-world", enabled: true }, store);
+    const plugin2 = new PersistencePlugin(world2, events2, { storageKey: "test-world", storageKeyView: "test-view", enabled: true }, store);
     plugin2.activate();
     let reloadCalled = false;
     plugin2.setReloadHandler(() => {
@@ -141,7 +141,7 @@ describe("PersistencePlugin", () => {
     source.place({ x: 0, y: -8, z: -5 }, "wood");    // 负 Y（B2）
 
     const sourceEvents = new EventBus();
-    const sourcePlugin = new PersistencePlugin(source, sourceEvents, { storageKey: "legacy", enabled: true }, store);
+    const sourcePlugin = new PersistencePlugin(source, sourceEvents, { storageKey: "legacy", storageKeyView: "legacy-view", enabled: true }, store);
     sourcePlugin.activate();
     expect(sourcePlugin.saveWorld()).toBe(true);
 
@@ -154,7 +154,7 @@ describe("PersistencePlugin", () => {
     // 加载到新世界
     const target = new WorldState();
     const targetEvents = new EventBus();
-    const targetPlugin = new PersistencePlugin(target, targetEvents, { storageKey: "legacy", enabled: true }, store);
+    const targetPlugin = new PersistencePlugin(target, targetEvents, { storageKey: "legacy", storageKeyView: "legacy-view", enabled: true }, store);
     targetPlugin.activate();
     expect(targetPlugin.loadWorld()).toBe(true);
 
@@ -170,20 +170,20 @@ describe("PersistencePlugin", () => {
     source.place({ x: 5, y: -1, z: 3 }, "glass");
     source.place({ x: -2, y: -32, z: 0 }, "stone"); // Y 下界
 
-    const sourcePlugin = new PersistencePlugin(source, new EventBus(), { storageKey: "idempotent", enabled: true }, store);
+    const sourcePlugin = new PersistencePlugin(source, new EventBus(), { storageKey: "idempotent", storageKeyView: "idempotent-view", enabled: true }, store);
     sourcePlugin.activate();
     expect(sourcePlugin.saveWorld()).toBe(true);
 
     // 第一次加载
     const world1 = new WorldState();
-    const plugin1 = new PersistencePlugin(world1, new EventBus(), { storageKey: "idempotent", enabled: true }, store);
+    const plugin1 = new PersistencePlugin(world1, new EventBus(), { storageKey: "idempotent", storageKeyView: "idempotent-view", enabled: true }, store);
     plugin1.activate();
     expect(plugin1.loadWorld()).toBe(true);
     const first = world1.serialize();
 
     // 第二次加载（同一存档，新世界）
     const world2 = new WorldState();
-    const plugin2 = new PersistencePlugin(world2, new EventBus(), { storageKey: "idempotent", enabled: true }, store);
+    const plugin2 = new PersistencePlugin(world2, new EventBus(), { storageKey: "idempotent", storageKeyView: "idempotent-view", enabled: true }, store);
     plugin2.activate();
     expect(plugin2.loadWorld()).toBe(true);
     const second = world2.serialize();

@@ -3,6 +3,7 @@ import { EventBus } from "../../core/events/EventBus";
 
 export interface PersistencePluginConfig {
   storageKey: string;
+  storageKeyView: string;
   enabled: boolean;
 }
 
@@ -36,6 +37,7 @@ export class PersistencePlugin {
     private readonly events: EventBus,
     private readonly config: PersistencePluginConfig = {
       storageKey: "castle-academy-world-v1",
+      storageKeyView: "castle-academy-view-v1",
       enabled: true
     },
     private readonly store: Store | null = null
@@ -109,6 +111,29 @@ export class PersistencePlugin {
       return ok;
     } catch {
       return false;
+    }
+  }
+
+  /** Save layer/section view state (visibility, view mode, section) to localStorage. */
+  saveViewState(viewState: Record<string, unknown>): boolean {
+    if (!this.active || !this.config.enabled) return false;
+    try {
+      this.storage?.setItem(this.config.storageKeyView, JSON.stringify(viewState));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Load previously saved layer/section view state. Returns null if none. */
+  loadViewState(): Record<string, unknown> | null {
+    if (!this.active || !this.config.enabled) return null;
+    try {
+      const raw = this.storage?.getItem(this.config.storageKeyView);
+      if (!raw) return null;
+      return JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      return null;
     }
   }
 
