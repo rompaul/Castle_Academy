@@ -5,7 +5,7 @@ import type { GameActions } from "../rendering/GameCanvas";
 import { BLOCKS, type BlockId } from "../core/world/blocks";
 import { Hotbar } from "../ui/Hotbar";
 import { HelpPanel } from "../ui/HelpPanel";
-import type { ViewMode, SectionViewState } from "../plugins/layers/LayerTypes";
+import type { SectionViewState } from "../plugins/layers/LayerTypes";
 
 export function App() {
   const [selectedBlock, setSelectedBlock] = useState<BlockId>("grass");
@@ -22,22 +22,37 @@ export function App() {
   const toastTimerRef = useRef<number | null>(null);
 
   const layerPlugin = gameRef.current?.layerPlugin;
-  const [viewModeState, setViewModeState] = useState<ViewMode>(() =>
-    layerPlugin ? layerPlugin.getViewMode() : { type: "all" }
-  );
+  const [groundVisible, setGroundVisible] = useState<boolean>(true);
+  const [undergroundVisible, setUndergroundVisible] = useState<boolean>(true);
   const [sectionState, setSectionState] = useState<SectionViewState>(() =>
     layerPlugin ? layerPlugin.getSectionView() : { enabled: false, axis: "x", coordinate: 0, keptSide: "positive" }
   );
 
-  // 订阅 LayerPlugin 状态变更，驱动 UI 重新渲染（图标 active 状态等）
+  const handleGroundChange = (checked: boolean) => {
+    setGroundVisible(checked);
+    const lp = gameRef.current?.layerPlugin;
+    if (!lp) return;
+    lp.getAllLayers().forEach((layer) => {
+      if (layer.minY >= 0) lp.setLayerVisibility(layer.id, checked);
+    });
+  };
+
+  const handleUndergroundChange = (checked: boolean) => {
+    setUndergroundVisible(checked);
+    const lp = gameRef.current?.layerPlugin;
+    if (!lp) return;
+    lp.getAllLayers().forEach((layer) => {
+      if (layer.maxYExclusive <= 0) lp.setLayerVisibility(layer.id, checked);
+    });
+  };
+
+  // 订阅 LayerPlugin 剖面状态变更，驱动 UI 重新渲染
   useEffect(() => {
     const lp = gameRef.current?.layerPlugin;
     if (!lp) return;
-    const unsub1 = lp.onViewModeChange?.((mode: ViewMode) => setViewModeState(mode));
-    const unsub2 = lp.onSectionChange?.((section: SectionViewState) => setSectionState(section));
+    const unsub = lp.onSectionChange?.((section: SectionViewState) => setSectionState(section));
     return () => {
-      unsub1();
-      unsub2();
+      unsub();
     };
   }, [gameRef.current]);
 
@@ -176,26 +191,30 @@ export function App() {
             <button className="subtle-button" onClick={() => setLayerPanelOpen(false)}>Close</button>
           </div>
 
-          {/* Layer: 图标标识，只分 Ground / Underground */}
+          {/* Layer: 图标标识，只分 Ground / Underground，可同时选中 */}
           <div className="layer-section">
             <label className="layer-label">Layers</label>
             <div className="layer-icons">
-              <button
-                className={`layer-icon ${viewModeState.type === "above-ground" ? "active" : ""}`}
-                onClick={() => layerPlugin?.setViewMode({ type: "above-ground" })}
-                title="Ground"
-              >
+              <label className={`layer-icon ${groundVisible ? "active" : ""}`}>
+                <input
+                  type="checkbox"
+                  checked={groundVisible}
+                  onChange={(e) => handleGroundChange(e.target.checked)}
+                  style={{ display: "none" }}
+                />
                 <Home size={16} />
                 <span className="layer-icon-label">Ground</span>
-              </button>
-              <button
-                className={`layer-icon ${viewModeState.type === "underground" ? "active" : ""}`}
-                onClick={() => layerPlugin?.setViewMode({ type: "underground" })}
-                title="Underground"
-              >
+              </label>
+              <label className={`layer-icon ${undergroundVisible ? "active" : ""}`}>
+                <input
+                  type="checkbox"
+                  checked={undergroundVisible}
+                  onChange={(e) => handleUndergroundChange(e.target.checked)}
+                  style={{ display: "none" }}
+                />
                 <ArrowDown size={16} />
                 <span className="layer-icon-label">Underground</span>
-              </button>
+              </label>
             </div>
           </div>
 
