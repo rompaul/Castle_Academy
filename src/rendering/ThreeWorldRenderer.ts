@@ -33,6 +33,7 @@ export class ThreeWorldRenderer {
   private readonly unsubscribeLayerEvents = new Array<() => void>();
   private readonly geometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
   private readonly materials = new Map<BlockId, THREE.MeshStandardMaterial>();
+  private readonly fallbackMaterial: THREE.MeshStandardMaterial;
   private readonly ground: THREE.Mesh;
   private readonly groundGeometry: THREE.BoxGeometry;
   private readonly groundMaterial: THREE.MeshStandardMaterial;
@@ -130,7 +131,7 @@ export class ThreeWorldRenderer {
     this.groundGeometry = new THREE.BoxGeometry(32, 1, 32);
     this.groundMaterial = new THREE.MeshStandardMaterial({ color: 0x66834f, roughness: 1 });
     this.ground = new THREE.Mesh(this.groundGeometry, this.groundMaterial);
-    this.ground.position.y = WORLD_BOUNDS.minY - 0.5;
+    this.ground.position.y = -0.5;
     this.ground.receiveShadow = true;
     this.ground.userData.kind = "ground";
     this.scene.add(this.ground);
@@ -153,6 +154,15 @@ export class ThreeWorldRenderer {
         transparent: block.id === "glass",
         opacity: block.id === "glass" ? 0.48 : 1
       }));
+    });
+
+    // 缺失材质时的安全回退：不崩溃世界加载，记录诊断（Block Asset Architecture 第 6 条兼容性）
+    this.fallbackMaterial = new THREE.MeshStandardMaterial({
+      color: 0x808080,
+      roughness: 0.88,
+      metalness: 0,
+      transparent: false,
+      opacity: 1,
     });
 
     this.player = new PlayerController(this.renderer.domElement, this.world, this.onMessage);
@@ -205,6 +215,15 @@ export class ThreeWorldRenderer {
     }
     this.addBlock({ x: -7, y: 5, z: -5 }, "grass");
     this.addBlock({ x: -7, y: 5, z: -4 }, "grass");
+
+    // 地下室地面：y=-4（4 个方块层高），与地表 y=0 呼应
+    for (let x = -4; x <= 4; x++) {
+      for (let z = -4; z <= 4; z++) {
+        if (Math.abs(x) === 4 || Math.abs(z) === 4) {
+          this.addBlock({ x, y: -4, z }, "grass");
+        }
+      }
+    }
   }
 
   private key(position: GridPosition): string {
@@ -214,7 +233,11 @@ export class ThreeWorldRenderer {
   private addBlock(position: GridPosition, blockId: BlockId): boolean {
     if (!this.building.place(position, blockId)) return false;
     const layerId = this.layerPlugin.resolveLayerId(position.y) ?? this.layerPlugin.getDefaultLayerId() ?? "ground";
-    const mesh = new THREE.Mesh(this.geometry, this.materials.get(blockId)!);
+    const material = this.materials.get(blockId) ?? this.fallbackMaterial;
+    if (!this.materials.has(blockId)) {
+      console.warn(`[Castle] Missing material for blockId "${blockId}", using fallback material.`);
+    }
+    const mesh = new THREE.Mesh(this.geometry, material);
     mesh.position.set(position.x, position.y + 0.5, position.z);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -488,6 +511,7 @@ export class ThreeWorldRenderer {
     this.disposeMaterial(this.grid.material);
     this.outline.geometry.dispose();
     this.disposeMaterial(this.outline.material);
+    this.fallbackMaterial.dispose();
     this.geometry.dispose();
     this.materials.forEach((material) => material.dispose());
     this.renderer.dispose();
