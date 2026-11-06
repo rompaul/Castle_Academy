@@ -239,6 +239,8 @@ export class ThreeWorldRenderer {
       if (section.enabled) {
         if (section.axis === "x") {
           keep = section.keptSide === "positive" ? position.x >= section.coordinate : position.x <= section.coordinate;
+        } else if (section.axis === "y") {
+          keep = section.keptSide === "positive" ? position.y >= section.coordinate : position.y <= section.coordinate;
         } else {
           keep = section.keptSide === "positive" ? position.z >= section.coordinate : position.z <= section.coordinate;
         }

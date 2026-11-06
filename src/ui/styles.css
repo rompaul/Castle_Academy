@@ -172,6 +172,48 @@ kbd { min-width: 73px; padding: 5px 6px; color: #e8d39e; background: rgba(255,25
   border: 1px solid rgba(181,185,170,.35);
 }
 
+/* Layer icons: 图标按钮组（Ground / Underground） */
+.layer-icons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.layer-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 44px;
+  padding: 6px 4px;
+  font-size: 8px;
+  color: var(--muted);
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.layer-icon svg {
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+.layer-icon:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.layer-icon.active {
+  background: rgba(217,182,108,.15);
+  color: var(--gold);
+  border-color: var(--gold);
+}
+.layer-icon-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 7px;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
 @media (max-width: 700px) {
   .topbar { height: 62px; flex-basis: 62px; padding: 0 12px; }
   .brand-mark { width: 32px; height: 32px; }

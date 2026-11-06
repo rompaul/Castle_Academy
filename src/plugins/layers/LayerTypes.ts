@@ -42,8 +42,8 @@ export interface LayerState {
   section: SectionViewState;
 }
 
-/** 剖面轴：X 或 Z 轴对齐切面。 */
-export type SectionAxis = "x" | "z";
+/** 剖面轴：X、Y 或 Z 轴对齐切面。 */
+export type SectionAxis = "x" | "y" | "z";
 
 /** 剖面保留侧：正侧或负侧，另一侧从视图与射线命中中隐藏。 */
 export type SectionKeptSide = "positive" | "negative";

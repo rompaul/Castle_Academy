@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Home, ArrowDown, ArrowRight, ArrowUp, ArrowLeft } from "lucide-react";
 import { GameCanvas } from "../rendering/GameCanvas";
 import type { GameActions } from "../rendering/GameCanvas";
 import { BLOCKS, type BlockId } from "../core/world/blocks";
 import { Hotbar } from "../ui/Hotbar";
 import { HelpPanel } from "../ui/HelpPanel";
-import type { ViewMode } from "../plugins/layers/LayerTypes";
 
 export function App() {
   const [selectedBlock, setSelectedBlock] = useState<BlockId>("grass");
@@ -21,19 +21,8 @@ export function App() {
   const toastTimerRef = useRef<number | null>(null);
 
   const layerPlugin = gameRef.current?.layerPlugin;
-  const layers = layerPlugin ? layerPlugin.getAllLayers() : [];
-  const activeLayerId = layerPlugin ? layerPlugin.getActiveLayerId() : "";
   const viewMode = layerPlugin ? layerPlugin.getViewMode() : { type: "all" };
   const section = layerPlugin ? layerPlugin.getSectionView() : { enabled: false, axis: "x", coordinate: 0, keptSide: "positive" };
-
-  const getLayerVisibility = (layerId: string): boolean => {
-    const v = layerPlugin?.getLayerVisibility(layerId);
-    if (v === undefined) {
-      const def = layers.find((l) => l.id === layerId);
-      return def ? def.defaultVisible : true;
-    }
-    return v;
-  };
 
   const showMessage = useCallback((text: string) => {
     setMessage(text);
@@ -169,48 +158,31 @@ export function App() {
             <span className="layer-panel-title">Layers</span>
             <button className="subtle-button" onClick={() => setLayerPanelOpen(false)}>Close</button>
           </div>
+
+          {/* Layer: 图标标识，只分 Ground / Underground */}
           <div className="layer-section">
-            <label className="layer-label">View mode</label>
-            <select
-              className="layer-select"
-              value={viewMode.type}
-              onChange={(e) => {
-                const mode = e.target.value as Extract<ViewMode, { type: string }>["type"];
-                layerPlugin?.setViewMode({ type: mode });
-              }}
-            >
-              <option value="all">All layers</option>
-              <option value="above-ground">Above ground</option>
-              <option value="underground">Underground</option>
-              <option value="current-layer">Current layer only</option>
-            </select>
-          </div>
-          <div className="layer-section">
-            <label className="layer-label">Active layer</label>
-            <span className="layer-active-value">{activeLayerId}</span>
-          </div>
-          <div className="layer-section">
-            <label className="layer-label">Visibility</label>
-            <div className="layer-list">
-              {layers.map((layer) => (
-                <div key={layer.id} className="layer-row">
-                  <label className="layer-checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={getLayerVisibility(layer.id)}
-                      onChange={(e) => layerPlugin?.setLayerVisibility(layer.id, e.target.checked)}
-                    />
-                    {layer.label}
-                  </label>
-                  <span className="layer-kind">{layer.kind}</span>
-                  <span className="layer-range">Y {layer.minY}–{layer.maxYExclusive}</span>
-                  <span className={layer.buildable ? "layer-tag buildable" : "layer-tag readonly"}>
-                    {layer.buildable ? "buildable" : "view only"}
-                  </span>
-                </div>
-              ))}
+            <label className="layer-label">Layers</label>
+            <div className="layer-icons">
+              <button
+                className={`layer-icon ${viewMode.type === "above-ground" ? "active" : ""}`}
+                onClick={() => layerPlugin?.setViewMode({ type: "above-ground" })}
+                title="Ground"
+              >
+                <Home size={16} />
+                <span className="layer-icon-label">Ground</span>
+              </button>
+              <button
+                className={`layer-icon ${viewMode.type === "underground" ? "active" : ""}`}
+                onClick={() => layerPlugin?.setViewMode({ type: "underground" })}
+                title="Underground"
+              >
+                <ArrowDown size={16} />
+                <span className="layer-icon-label">Underground</span>
+              </button>
             </div>
           </div>
+
+          {/* Section: 图标标识，Axis X / Y / Z */}
           <div className="layer-section">
             <label className="layer-label">Section</label>
             <div className="layer-row">
@@ -223,23 +195,43 @@ export function App() {
                 Enabled
               </label>
             </div>
+            <div className="layer-icons">
+              <button
+                className={`layer-icon ${section.axis === "x" ? "active" : ""}`}
+                onClick={() => layerPlugin?.setSectionView({ axis: "x" })}
+                title="Axis X"
+              >
+                <ArrowRight size={16} />
+                <span className="layer-icon-label">Axis X</span>
+              </button>
+              <button
+                className={`layer-icon ${section.axis === "y" ? "active" : ""}`}
+                onClick={() => layerPlugin?.setSectionView({ axis: "y" })}
+                title="Axis Y"
+              >
+                <ArrowUp size={16} />
+                <span className="layer-icon-label">Axis Y</span>
+              </button>
+              <button
+                className={`layer-icon ${section.axis === "z" ? "active" : ""}`}
+                onClick={() => layerPlugin?.setSectionView({ axis: "z" })}
+                title="Axis Z"
+              >
+                <ArrowLeft size={16} />
+                <span className="layer-icon-label">Axis Z</span>
+              </button>
+            </div>
             <div className="layer-row">
-              <label className="layer-checkbox-label" style={{ flex: 1 }}>
-                <input
-                  type="checkbox"
-                  checked={section.axis === "x"}
-                  onChange={(e) => layerPlugin?.setSectionView({ axis: e.target.checked ? "x" : "z" })}
-                />
-                Axis X
-              </label>
-              <label className="layer-checkbox-label" style={{ flex: 1 }}>
-                <input
-                  type="checkbox"
-                  checked={section.axis === "z"}
-                  onChange={(e) => layerPlugin?.setSectionView({ axis: e.target.checked ? "z" : "x" })}
-                />
-                Axis Z
-              </label>
+              <input
+                type="number"
+                className="layer-select"
+                value={section.coordinate}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (Number.isInteger(v)) layerPlugin?.setSectionView({ coordinate: v });
+                }}
+                placeholder="coordinate"
+              />
             </div>
             <div className="layer-row">
               <label className="layer-checkbox-label" style={{ flex: 1 }}>
@@ -258,18 +250,6 @@ export function App() {
                 />
                 Keep −
               </label>
-            </div>
-            <div className="layer-row">
-              <input
-                type="number"
-                className="layer-select"
-                value={section.coordinate}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  if (Number.isInteger(v)) layerPlugin?.setSectionView({ coordinate: v });
-                }}
-                placeholder="coordinate"
-              />
             </div>
           </div>
         </div>
