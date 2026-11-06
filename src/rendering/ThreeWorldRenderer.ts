@@ -61,9 +61,34 @@ export class ThreeWorldRenderer {
 
     const registry = new LayerRegistry();
     if (!layerPlugin) {
-      registry.register({ id: "basement-1", label: "Basement 1", kind: "basement", minY: -4, maxYExclusive: 0, order: -1, defaultVisible: true, buildable: true });
-      registry.register({ id: "ground", label: "Ground", kind: "ground-floor", minY: 0, maxYExclusive: 4, order: 0, defaultVisible: true, buildable: true });
-      registry.register({ id: "level-1", label: "Level 1", kind: "upper-floor", minY: 4, maxYExclusive: 8, order: 1, defaultVisible: true, buildable: true });
+      // 地下层：从 -4 向下到 -32，每层 4 个单位
+      for (let y = -4; y > WORLD_BOUNDS.minY; y -= 4) {
+        const index = Math.abs(y / 4);
+        registry.register({
+          id: `basement-${index}`,
+          label: `Basement ${index}`,
+          kind: "basement",
+          minY: y - 4,
+          maxYExclusive: y,
+          order: -index,
+          defaultVisible: true,
+          buildable: true,
+        });
+      }
+      // 地上层：从 0 向上到 64，每层 4 个单位
+      for (let y = 0; y < WORLD_BOUNDS.maxYExclusive; y += 4) {
+        const index = y / 4 + 1;
+        registry.register({
+          id: `level-${index}`,
+          label: `Level ${index}`,
+          kind: index === 1 ? "ground-floor" : "upper-floor",
+          minY: y,
+          maxYExclusive: y + 4,
+          order: index - 1,
+          defaultVisible: true,
+          buildable: true,
+        });
+      }
     }
     this.layerPlugin = layerPlugin ?? new LayerPlugin(this.events, registry);
     this.layerRenderAdapter = layerRenderAdapter ?? new LayerRenderAdapter(this.scene, this.layerPlugin);
