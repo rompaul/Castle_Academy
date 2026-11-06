@@ -341,8 +341,8 @@ export class ThreeWorldRenderer {
     this.raycaster.setFromCamera(this.pointer, this.player.camera);
     const visibleMeshes = [...this.blockMeshes.values()].filter((mesh) => {
       const layerId = mesh.userData.layerId as string | undefined;
-      if (!layerId) return true;
-      return this.layerPlugin.isLayerEffectivelyVisible(layerId);
+      if (!layerId) return mesh.visible;
+      return mesh.visible && this.layerPlugin.isLayerEffectivelyVisible(layerId);
     });
     const targets = [...visibleMeshes, this.ground];
     const hit = this.raycaster.intersectObjects(targets, false)[0];
@@ -361,7 +361,7 @@ export class ThreeWorldRenderer {
       const point = hit.point;
       this.targetPosition = {
         x: Math.floor(point.x + 0.5),
-        y: 0,
+        y: 1,
         z: Math.floor(point.z + 0.5)
       };
       this.outline.position.set(this.targetPosition.x, 0.5, this.targetPosition.z);
@@ -374,13 +374,13 @@ export class ThreeWorldRenderer {
     // Placement on a selected block uses the face normal cached by raycast.
     const visibleMeshes = [...this.blockMeshes.values()].filter((mesh) => {
       const layerId = mesh.userData.layerId as string | undefined;
-      if (!layerId) return true;
-      return this.layerPlugin.isLayerEffectivelyVisible(layerId);
+      if (!layerId) return mesh.visible;
+      return mesh.visible && this.layerPlugin.isLayerEffectivelyVisible(layerId);
     });
     const hit = this.raycaster.intersectObjects([...visibleMeshes, this.ground], false)[0];
     if (!hit) return null;
     if (hit.object.userData.kind === "ground") {
-      return { x: this.targetPosition.x, y: 0, z: this.targetPosition.z };
+      return { x: this.targetPosition.x, y: 1, z: this.targetPosition.z };
     }
     const normal = hit.face?.normal.clone().transformDirection(hit.object.matrixWorld);
     if (!normal) return null;
