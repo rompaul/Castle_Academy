@@ -10,6 +10,7 @@ import { MeasurementPlugin } from "../plugins/measurement/MeasurementPlugin";
 import { LayerPlugin } from "../plugins/layers/LayerPlugin";
 import { LayerRegistry } from "../plugins/layers/LayerRegistry";
 import { LayerRenderAdapter } from "./LayerRenderAdapter";
+import { generateTextureSet } from "./textureGenerator";
 import type { LayerKind, SectionViewState } from "../plugins/layers/LayerTypes";
 import { EventBus } from "../core/events/EventBus";
 
@@ -147,13 +148,28 @@ export class ThreeWorldRenderer {
     this.scene.add(this.outline);
 
     BLOCKS.forEach((block) => {
-      this.materials.set(block.id, new THREE.MeshStandardMaterial({
-        color: block.color,
+      const baseParams = {
         roughness: block.id === "glass" ? 0.22 : 0.88,
         metalness: 0,
         transparent: block.id === "glass",
-        opacity: block.id === "glass" ? 0.48 : 1
-      }));
+        opacity: block.id === "glass" ? 0.48 : 1,
+      };
+      // 程序化纹理（V042-007）：三面纹理可用时用材质数组 [side, side, top, bottom, side, side]
+      const texSet = generateTextureSet(block.id);
+      if (texSet) {
+        const sideMat = new THREE.MeshStandardMaterial({ ...baseParams, map: texSet.side });
+        const topMat = new THREE.MeshStandardMaterial({ ...baseParams, map: texSet.top });
+        const bottomMat = new THREE.MeshStandardMaterial({ ...baseParams, map: texSet.bottom });
+        this.materials.set(block.id, sideMat);
+        this.materials.set(`${block.id}:top` as BlockId, topMat);
+        this.materials.set(`${block.id}:bottom` as BlockId, bottomMat);
+      } else {
+        // 纹理缺失：纯色回退（Block Asset Architecture 第 6 条兼容性）
+        this.materials.set(block.id, new THREE.MeshStandardMaterial({
+          color: block.color,
+          ...baseParams,
+        }));
+      }
     });
 
     // 缺失材质时的安全回退：不崩溃世界加载，记录诊断（Block Asset Architecture 第 6 条兼容性）
@@ -230,13 +246,24 @@ export class ThreeWorldRenderer {
     return `${position.x},${position.y},${position.z}`;
   }
 
+  /** 解析方块材质：三面纹理可用时返回 6 面材质数组，否则单材质或 fallback。 */
+  private resolveMaterial(blockId: BlockId): THREE.Material | THREE.Material[] {
+    const topMat = this.materials.get(`${blockId}:top` as BlockId);
+    const bottomMat = this.materials.get(`${blockId}:bottom` as BlockId);
+    const sideMat = this.materials.get(blockId);
+    if (topMat && bottomMat && sideMat) {
+      return [sideMat, sideMat, topMat, bottomMat, sideMat, sideMat];
+    }
+    if (!sideMat) {
+      console.warn(`[Castle] Missing material for blockId "${blockId}", using fallback material.`);
+    }
+    return sideMat ?? this.fallbackMaterial;
+  }
+
   private addBlock(position: GridPosition, blockId: BlockId): boolean {
     if (!this.building.place(position, blockId)) return false;
     const layerId = this.layerPlugin.resolveLayerId(position.y) ?? this.layerPlugin.getDefaultLayerId() ?? "ground";
-    const material = this.materials.get(blockId) ?? this.fallbackMaterial;
-    if (!this.materials.has(blockId)) {
-      console.warn(`[Castle] Missing material for blockId "${blockId}", using fallback material.`);
-    }
+    const material = this.resolveMaterial(blockId);
     const mesh = new THREE.Mesh(this.geometry, material);
     mesh.position.set(position.x, position.y + 0.5, position.z);
     mesh.castShadow = true;
@@ -273,7 +300,7 @@ export class ThreeWorldRenderer {
     this.outline.visible = false;
 
     for (const record of this.world.all()) {
-      const mesh = new THREE.Mesh(this.geometry, this.materials.get(record.blockId)!);
+      const mesh = new THREE.Mesh(this.geometry, this.resolveMaterial(record.blockId));
       mesh.position.set(record.position.x, record.position.y + 0.5, record.position.z);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
