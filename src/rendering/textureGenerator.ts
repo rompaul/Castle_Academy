@@ -427,3 +427,90 @@ export const BLOCK_IDS_WITH_TEXTURES: string[] = [...new Set(
 
 /** 导出内部常量供测试。 */
 export const TEXTURE_SIZE = TEX_SIZE;
+
+/* ---------- 纹理图集（atlas，draw call 优化） ---------- */
+
+/** 图集网格：8×8 个 16px 瓦片 = 128×128 canvas（唯一瓦片 ~25 个，余量充足） */
+const ATLAS_COLS = 8;
+const ATLAS_ROWS = 8;
+
+export interface BlockAtlas {
+  texture: THREE.CanvasTexture;
+  /** `${blockId}:${face}` → 瓦片列/行（行 0 在画布顶部） */
+  uvMap: Record<string, { col: number; row: number }>;
+  cols: number;
+  rows: number;
+}
+
+/**
+ * 将全部方块面纹理烘焙进单张图集。
+ * 相同绘制函数共享同一瓦片（darkSoil 被 dirt 三面 + grass bottom 复用等），
+ * 最终唯一瓦片约 25 个，远小于 64 格上限。
+ * NearestFilter + 关闭 mipmap 避免瓦片间渗色。
+ */
+export function buildBlockAtlas(): BlockAtlas {
+  const canvas = document.createElement("canvas");
+  canvas.width = ATLAS_COLS * TEX_SIZE;
+  canvas.height = ATLAS_ROWS * TEX_SIZE;
+  const ctx = canvas.getContext("2d")!;
+
+  const slotByFn = new Map<() => HTMLCanvasElement, { col: number; row: number }>();
+  const uvMap: BlockAtlas["uvMap"] = {};
+  let next = 0;
+  for (const [key, gen] of Object.entries(GENERATORS)) {
+    let slot = slotByFn.get(gen);
+    if (!slot) {
+      if (next >= ATLAS_COLS * ATLAS_ROWS) {
+        throw new Error(`Block atlas overflow: more than ${ATLAS_COLS * ATLAS_ROWS} unique tiles`);
+      }
+      slot = { col: next % ATLAS_COLS, row: Math.floor(next / ATLAS_COLS) };
+      slotByFn.set(gen, slot);
+      // 绘制一次瓦片到图集
+      ctx.drawImage(gen(), slot.col * TEX_SIZE, slot.row * TEX_SIZE);
+      next++;
+    }
+    uvMap[key] = slot;
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  texture.generateMipmaps = false;
+  texture.flipY = false; // UV 按画布坐标计算（见 createBlockGeometry）
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return { texture, uvMap, cols: ATLAS_COLS, rows: ATLAS_ROWS };
+}
+
+/**
+ * 为方块生成 UV 已映射到图集的 BoxGeometry 克隆。
+ * BoxGeometry 面顺序：px, nx, py(top), ny(bottom), pz, nz；
+ * 每面 4 顶点默认 UV 为 (0,1)(1,1)(0,0)(1,0)。
+ * flipY=false 时画布 v 向下增长，故 V = (row + (1 - v)) / rows。
+ */
+export function createBlockGeometry(
+  blockId: string,
+  atlas: BlockAtlas,
+  base: THREE.BoxGeometry
+): THREE.BoxGeometry {
+  const geometry = base.clone();
+  const uv = geometry.getAttribute("uv") as THREE.BufferAttribute;
+  const defaultUV = [
+    [0, 1], [1, 1], [0, 0], [1, 0],
+  ];
+  const faceTiles = ["side", "side", "top", "bottom", "side", "side"];
+  for (let face = 0; face < 6; face++) {
+    const slot = atlas.uvMap[`${blockId}:${faceTiles[face]}`];
+    if (!slot) continue; // 无纹理的块保留默认 UV（走 fallback 材质）
+    for (let j = 0; j < 4; j++) {
+      const i = face * 4 + j;
+      const [u, v] = defaultUV[j];
+      uv.setXY(
+        i,
+        (slot.col + u) / atlas.cols,
+        (slot.row + (1 - v)) / atlas.rows
+      );
+    }
+  }
+  uv.needsUpdate = true;
+  return geometry;
+}

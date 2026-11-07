@@ -10,7 +10,7 @@ import { MeasurementPlugin } from "../plugins/measurement/MeasurementPlugin";
 import { LayerPlugin } from "../plugins/layers/LayerPlugin";
 import { LayerRegistry } from "../plugins/layers/LayerRegistry";
 import { LayerRenderAdapter } from "./LayerRenderAdapter";
-import { generateTextureSet } from "./textureGenerator";
+import { buildBlockAtlas, createBlockGeometry, type BlockAtlas } from "./textureGenerator";
 import type { LayerKind, SectionViewState } from "../plugins/layers/LayerTypes";
 import { EventBus } from "../core/events/EventBus";
 
@@ -33,7 +33,10 @@ export class ThreeWorldRenderer {
   private fillStart: GridPosition | null = null;
   private readonly unsubscribeLayerEvents = new Array<() => void>();
   private readonly geometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
-  private readonly materials = new Map<BlockId, THREE.MeshStandardMaterial>();
+  /** 图集优化（V0.4.3）：每方块一个 UV 映射几何体 + 共享图集材质，draw calls 从 6/块 降到 1/块 */
+  private readonly blockGeometries = new Map<BlockId, THREE.BufferGeometry>();
+  private readonly materials = new Map<BlockId, THREE.Material>();
+  private atlasTexture: THREE.Texture | null = null;
   private readonly fallbackMaterial: THREE.MeshStandardMaterial;
   private readonly ground: THREE.Mesh;
   private readonly groundGeometry: THREE.BoxGeometry;
@@ -147,32 +150,34 @@ export class ThreeWorldRenderer {
     this.outline.visible = false;
     this.scene.add(this.outline);
 
-    BLOCKS.forEach((block) => {
-      const baseParams = {
-        roughness: block.id === "glass" ? 0.22 : 0.88,
-        metalness: 0,
-        transparent: block.id === "glass",
-        opacity: block.id === "glass" ? 0.48 : 1,
-      };
-      // 程序化纹理（V042-007）：三面纹理可用时用材质数组 [side, side, top, bottom, side, side]
-      // DEV 性能 A/B：?flat=1 时跳过纹理，使用纯色材质（等价 V0.4.1 基线渲染路径）
-      const flatMode = import.meta.env.DEV && new URLSearchParams(window.location.search).has("flat");
-      const texSet = flatMode ? undefined : generateTextureSet(block.id);
-      if (texSet) {
-        const sideMat = new THREE.MeshStandardMaterial({ ...baseParams, map: texSet.side });
-        const topMat = new THREE.MeshStandardMaterial({ ...baseParams, map: texSet.top });
-        const bottomMat = new THREE.MeshStandardMaterial({ ...baseParams, map: texSet.bottom });
-        this.materials.set(block.id, sideMat);
-        this.materials.set(`${block.id}:top` as BlockId, topMat);
-        this.materials.set(`${block.id}:bottom` as BlockId, bottomMat);
-      } else {
-        // 纹理缺失：纯色回退（Block Asset Architecture 第 6 条兼容性）
+    // 材质策略（atlas 优化）：所有块共享一张图集纹理 + 按透明度分 3 个材质实例；
+    // 每块几何体 UV 指向自己在图集中的瓦片。?flat=1（DEV 性能 A/B）仍走纯色路径。
+    const flatMode = import.meta.env.DEV && new URLSearchParams(window.location.search).has("flat");
+    let atlas: BlockAtlas | null = null;
+    if (!flatMode) {
+      atlas = buildBlockAtlas();
+      this.atlasTexture = atlas.texture;
+      const atlasParams = { map: atlas.texture, roughness: 0.88, metalness: 0 };
+      const opaque = new THREE.MeshStandardMaterial({ ...atlasParams });
+      const glass = new THREE.MeshStandardMaterial({ ...atlasParams, transparent: true, opacity: 0.48, roughness: 0.22 });
+      const frameGlass = new THREE.MeshStandardMaterial({ ...atlasParams, transparent: true, opacity: 0.9 });
+      BLOCKS.forEach((block) => {
+        this.blockGeometries.set(block.id, createBlockGeometry(block.id, atlas!, this.geometry));
+        this.materials.set(
+          block.id,
+          block.id === "glass" ? glass : block.id === "window_frame" ? frameGlass : opaque
+        );
+      });
+    } else {
+      // 纯色基线路径（等价 V0.4.1 渲染）
+      BLOCKS.forEach((block) => {
         this.materials.set(block.id, new THREE.MeshStandardMaterial({
           color: block.color,
-          ...baseParams,
+          roughness: 0.88,
+          metalness: 0,
         }));
-      }
-    });
+      });
+    }
 
     // 缺失材质时的安全回退：不崩溃世界加载，记录诊断（Block Asset Architecture 第 6 条兼容性）
     this.fallbackMaterial = new THREE.MeshStandardMaterial({
@@ -254,25 +259,25 @@ export class ThreeWorldRenderer {
     return `${position.x},${position.y},${position.z}`;
   }
 
-  /** 解析方块材质：三面纹理可用时返回 6 面材质数组，否则单材质或 fallback。 */
-  private resolveMaterial(blockId: BlockId): THREE.Material | THREE.Material[] {
-    const topMat = this.materials.get(`${blockId}:top` as BlockId);
-    const bottomMat = this.materials.get(`${blockId}:bottom` as BlockId);
-    const sideMat = this.materials.get(blockId);
-    if (topMat && bottomMat && sideMat) {
-      return [sideMat, sideMat, topMat, bottomMat, sideMat, sideMat];
-    }
-    if (!sideMat) {
+  /** 解析方块材质：图集共享材质，未注册块回退纯色/灰色 fallback。 */
+  private resolveMaterial(blockId: BlockId): THREE.Material {
+    const material = this.materials.get(blockId);
+    if (!material) {
       console.warn(`[Castle] Missing material for blockId "${blockId}", using fallback material.`);
     }
-    return sideMat ?? this.fallbackMaterial;
+    return material ?? this.fallbackMaterial;
+  }
+
+  /** 方块几何体：有图集 UV 映射的克隆体，否则共享基础立方体。 */
+  private resolveGeometry(blockId: BlockId): THREE.BufferGeometry {
+    return this.blockGeometries.get(blockId) ?? this.geometry;
   }
 
   private addBlock(position: GridPosition, blockId: BlockId): boolean {
     if (!this.building.place(position, blockId)) return false;
     const layerId = this.layerPlugin.resolveLayerId(position.y) ?? this.layerPlugin.getDefaultLayerId() ?? "ground";
     const material = this.resolveMaterial(blockId);
-    const mesh = new THREE.Mesh(this.geometry, material);
+    const mesh = new THREE.Mesh(this.resolveGeometry(blockId), material);
     mesh.position.set(position.x, position.y + 0.5, position.z);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -308,7 +313,7 @@ export class ThreeWorldRenderer {
     this.outline.visible = false;
 
     for (const record of this.world.all()) {
-      const mesh = new THREE.Mesh(this.geometry, this.resolveMaterial(record.blockId));
+      const mesh = new THREE.Mesh(this.resolveGeometry(record.blockId), this.resolveMaterial(record.blockId));
       mesh.position.set(record.position.x, record.position.y + 0.5, record.position.z);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
@@ -550,7 +555,10 @@ export class ThreeWorldRenderer {
     this.disposeMaterial(this.outline.material);
     this.fallbackMaterial.dispose();
     this.geometry.dispose();
+    this.blockGeometries.forEach((geometry) => geometry.dispose());
+    this.blockGeometries.clear();
     this.materials.forEach((material) => material.dispose());
+    this.atlasTexture?.dispose();
     this.renderer.dispose();
     this.host.removeChild(this.renderer.domElement);
   }
