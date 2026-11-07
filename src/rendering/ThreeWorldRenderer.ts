@@ -10,6 +10,8 @@ import { MeasurementPlugin } from "../plugins/measurement/MeasurementPlugin";
 import { LayerPlugin } from "../plugins/layers/LayerPlugin";
 import { LayerRegistry } from "../plugins/layers/LayerRegistry";
 import { LayerRenderAdapter } from "./LayerRenderAdapter";
+import { WaterPlugin, type WaterFlowUpdatedPayload } from "../plugins/water/WaterPlugin";
+import { WaterRenderAdapter } from "./WaterRenderAdapter";
 import { buildBlockAtlas, createBlockGeometry, type BlockAtlas } from "./textureGenerator";
 import type { LayerKind, SectionViewState } from "../plugins/layers/LayerTypes";
 import { EventBus } from "../core/events/EventBus";
@@ -28,6 +30,8 @@ export class ThreeWorldRenderer {
   readonly player: PlayerController;
   readonly layerPlugin: LayerPlugin;
   readonly layerRenderAdapter: LayerRenderAdapter;
+  readonly waterPlugin: WaterPlugin;
+  private readonly waterRenderAdapter: WaterRenderAdapter;
   private readonly blockMeshes = new Map<string, THREE.Mesh>();
   private lineStart: GridPosition | null = null;
   private fillStart: GridPosition | null = null;
@@ -118,7 +122,18 @@ export class ThreeWorldRenderer {
       // 蓝图放置后重新渲染，确保 Renderer 与 WorldState 同步
       this.events.on("world.blueprint.placed", () => {
         this.reloadFromWorld();
+      }),
+      // 水域增量 → 水渲染适配层（V0.5）
+      this.events.on<WaterFlowUpdatedPayload>("water.flow.updated", (event) => {
+        this.waterRenderAdapter.applyDiff(event.payload.added, event.payload.removed);
+        this.applySectionView(this.layerPlugin.getSectionView());
       })
+    );
+
+    // V0.5 水模拟插件：WorldState 是唯一事实源，水格是 WaterPlugin 的派生状态
+    this.waterPlugin = new WaterPlugin(this.world, this.events);
+    this.waterRenderAdapter = new WaterRenderAdapter(this.layerRenderAdapter, (y) =>
+      this.layerPlugin.resolveLayerId(y) ?? this.layerPlugin.getDefaultLayerId() ?? "ground"
     );
 
     this.scene.background = new THREE.Color(0x9eb6b5);
@@ -199,6 +214,7 @@ export class ThreeWorldRenderer {
     this.renderer.domElement.addEventListener("pointerdown", this.onPointerDown);
     this.renderer.domElement.addEventListener("pointermove", this.onPointerMove);
     this.seedWorld();
+    this.waterPlugin.activate();
     if (import.meta.env.DEV) {
       Object.assign(window, {
         __CASTLE_TEST__: {
@@ -220,7 +236,14 @@ export class ThreeWorldRenderer {
           getSectionView: () => this.layerPlugin.getSectionView(),
           setLayerVisibility: (layerId: string, visible: boolean) => this.layerPlugin.setLayerVisibility(layerId, visible),
           setSectionView: (section: { enabled?: boolean; axis?: "x" | "y" | "z"; coordinate?: number; keptSide?: "positive" | "negative" }) =>
-            this.layerPlugin.setSectionView(section)
+            this.layerPlugin.setSectionView(section),
+          getWater: () => ({
+            cells: this.waterPlugin.getQuery().getWaterCells(),
+            isConverged: this.waterPlugin.getQuery().isConverged(),
+            hasWater: (x: number, y: number, z: number) => this.waterPlugin.getQuery().hasWater({ x, y, z }),
+          }),
+          placeWaterSource: (x: number, y: number, z: number) => this.addBlock({ x, y, z }, "water_source"),
+          removeWaterSource: (x: number, y: number, z: number) => this.removeBlock({ x, y, z })
         }
       });
     }
@@ -309,6 +332,7 @@ export class ThreeWorldRenderer {
   reloadFromWorld(): void {
     this.layerRenderAdapter.removeAllGroups();
     this.blockMeshes.clear();
+    this.waterRenderAdapter.clear();
     this.targetPosition = null;
     this.outline.visible = false;
 
@@ -326,6 +350,7 @@ export class ThreeWorldRenderer {
     }
     this.layerRenderAdapter.applyAllLayerVisibility();
     this.applySectionView(this.layerPlugin.getSectionView());
+    this.waterPlugin.refresh(); // 存档加载/蓝图放置后重算水域（水格是派生状态）
   }
 
   /** 根据当前剖面状态设置单个 mesh 的显隐。 */
@@ -354,6 +379,18 @@ export class ThreeWorldRenderer {
         targetStillValid = true;
       }
     }
+    // 水格同样服从剖面裁切（非破坏性视图，不修改数据）
+    this.waterRenderAdapter.forEachMesh((mesh) => {
+      const position = mesh.userData.position as GridPosition | undefined;
+      if (!position) return;
+      let keepWater = true;
+      if (section.enabled) {
+        if (section.axis === "x") keepWater = section.keptSide === "positive" ? position.x >= section.coordinate : position.x <= section.coordinate;
+        else if (section.axis === "y") keepWater = section.keptSide === "positive" ? position.y >= section.coordinate : position.y <= section.coordinate;
+        else keepWater = section.keptSide === "positive" ? position.z >= section.coordinate : position.z <= section.coordinate;
+      }
+      mesh.visible = keepWater;
+    });
     if (this.targetPosition && !targetStillValid) {
       this.targetPosition = null;
       this.outline.visible = false;
@@ -529,9 +566,12 @@ export class ThreeWorldRenderer {
     }
     this.world.clear();
     this.blockMeshes.clear();
+    this.waterRenderAdapter.clear();
     this.targetPosition = null;
     this.outline.visible = false;
     this.seedWorld();
+    this.waterPlugin.activate();
+    this.waterPlugin.refresh();
     this.player.reset();
     this.onMessage("World reset.");
   }
@@ -544,6 +584,8 @@ export class ThreeWorldRenderer {
     this.renderer.domElement.removeEventListener("pointerdown", this.onPointerDown);
     this.renderer.domElement.removeEventListener("pointermove", this.onPointerMove);
     this.player.dispose();
+    this.waterPlugin.dispose();
+    this.waterRenderAdapter.dispose();
     this.unsubscribeLayerEvents.forEach((unsub) => unsub());
     if (import.meta.env.DEV) delete (window as Window & { __CASTLE_TEST__?: unknown }).__CASTLE_TEST__;
     this.scene.remove(this.ground, this.grid, this.outline);

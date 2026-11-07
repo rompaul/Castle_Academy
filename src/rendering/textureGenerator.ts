@@ -303,8 +303,80 @@ function soilBottom(): HTMLCanvasElement {
   return darkSoil();
 }
 
-/* ---------- 纹理注册表 ---------- */
+/* ---------- V0.5 水工程方块纹理 ---------- */
 
+/** Water Source top：深蓝水面 + 同心波纹（原创，非参照像素） */
+function waterSourceTop(): HTMLCanvasElement {
+  const rng = mulberry32(70);
+  const tones = ["#2E6BB8", "#3576C6", "#3B7DD8"];
+  return generateCanvas((x, y) => {
+    const dist = Math.max(Math.abs(x - 8), Math.abs(y - 8)); // 切比雪夫同心环
+    if (dist % 3 === 0 && rng() < 0.6) return "#4A8CE4"; // 波纹亮环
+    return tones[Math.floor(rng() * tones.length)];
+  });
+}
+
+/** Water Source side：石砌井壁 + 中部水面带 */
+function waterSourceSide(): HTMLCanvasElement {
+  const rng = mulberry32(71);
+  const stone = ["#7E8284", "#8A8C8E"];
+  return generateCanvas((_x, y) => {
+    if (y >= 6 && y <= 9) return y === 6 || y === 9 ? "#2456A0" : ["#2E6BB8", "#3B7DD8"][Math.floor(rng() * 2)];
+    if (y % 5 === 0) return "#5F6365"; // 石缝
+    return stone[Math.floor(rng() * stone.length)];
+  });
+}
+
+/** Drain Channel top：石板 + 中央凹槽（深色导水槽） */
+function drainChannelTop(): HTMLCanvasElement {
+  const rng = mulberry32(72);
+  const stone = ["#6E7580", "#787F8A", "#646B76"];
+  return generateCanvas((x, y) => {
+    if (y >= 6 && y <= 9) {
+      if (x % 5 === 0) return "#4A505A"; // 槽内横档
+      return "#3E444E"; // 凹槽
+    }
+    return stone[Math.floor(rng() * stone.length)];
+  });
+}
+
+/** Drain Channel side：石板 + 侧面槽口开口 */
+function drainChannelSide(): HTMLCanvasElement {
+  const rng = mulberry32(73);
+  const stone = ["#6E7580", "#787F8A"];
+  return generateCanvas((x, y) => {
+    if (y >= 7 && y <= 10 && (x <= 2 || x >= 13)) return "#3E444E"; // 两端槽口
+    if (y % 5 === 0) return "#525860";
+    return stone[Math.floor(rng() * stone.length)];
+  });
+}
+
+/** Water Pipe side：石壳 + 竖向蓝色管道 */
+function waterPipeSide(): HTMLCanvasElement {
+  const rng = mulberry32(74);
+  const shell = ["#8A8C8E", "#7E8284"];
+  return generateCanvas((x, y) => {
+    if (x >= 5 && x <= 10) {
+      if (x === 5 || x === 10) return "#2E5E8C"; // 管缘
+      return (x + y) % 4 === 0 ? "#4A90C2" : "#4186B8"; // 管身高光
+    }
+    return shell[Math.floor(rng() * shell.length)];
+  });
+}
+
+/** Water Pipe cap：石壳 + 蓝色管口圆环 */
+function waterPipeCap(): HTMLCanvasElement {
+  const rng = mulberry32(75);
+  const shell = ["#8A8C8E", "#7E8284"];
+  return generateCanvas((x, y) => {
+    const dist = (x - 8) * (x - 8) + (y - 8) * (y - 8);
+    if (dist < 9) return "#2E5E8C"; // 管口
+    if (dist < 16) return "#4A90C2"; // 环带
+    return shell[Math.floor(rng() * shell.length)];
+  });
+}
+
+/* ---------- 纹理注册表 ---------- */
 interface TextureSet {
   top: THREE.CanvasTexture;
   side: THREE.CanvasTexture;
@@ -382,6 +454,17 @@ const GENERATORS: Record<string, () => HTMLCanvasElement> = {
   "window_frame:top": honeyOak,
   "window_frame:side": windowFrameSide,
   "window_frame:bottom": honeyOak,
+
+  /* ---------- V0.5 水工程方块 ---------- */
+  "water_source:top": waterSourceTop,
+  "water_source:side": waterSourceSide,
+  "water_source:bottom": waterSourceSide,
+  "drain_channel:top": drainChannelTop,
+  "drain_channel:side": drainChannelSide,
+  "drain_channel:bottom": layeredStone,
+  "water_pipe_blue:top": waterPipeCap,
+  "water_pipe_blue:side": waterPipeSide,
+  "water_pipe_blue:bottom": waterPipeCap,
 };
 
 /**

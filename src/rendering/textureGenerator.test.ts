@@ -22,7 +22,7 @@ describe("textureGenerator registry (V042-007)", () => {
     }
   });
 
-  it("全部 22 个 V0.3+V0.4.2 块都有纹理集", () => {
+  it("全部 25 个 V0.3+V0.4.2+V0.5 块都有纹理集", () => {
     const all = [
       "grass", "dirt", "stone", "wood", "sand", "brick", "glass",
       "sandstone_warm", "rock_moss", "gravel", "wood_walnut", "brick_limestone",
@@ -36,7 +36,7 @@ describe("textureGenerator registry (V042-007)", () => {
   });
 
   it("导出的带纹理块 ID 列表与 22 块一致", () => {
-    expect(BLOCK_IDS_WITH_TEXTURES.length).toBe(22);
+    expect(BLOCK_IDS_WITH_TEXTURES.length).toBe(25);
     expect(BLOCK_IDS_WITH_TEXTURES).toContain("grass");
     expect(BLOCK_IDS_WITH_TEXTURES).toContain("window_frame");
     expect(BLOCK_IDS_WITH_TEXTURES).toContain("stair_stone");

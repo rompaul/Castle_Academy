@@ -192,6 +192,20 @@ export const BLOCKS = [
     model: { type: "frame", orientation: "fixed" },
     material: { top: "window_frame_top", side: "window_frame_side", bottom: "window_frame_bottom", texelSize: 16, transparent: true, opacity: 0.9 },
     behavior: FRAME_BEHAVIOR },
+
+  // V0.5 水工程方块（激活 V0.4.2 块目录占位 ID）
+  { id: "water_source", name: "Water Source", color: 0x3b7dd8, swatch: "#3b7dd8",
+    model: CUBE_MODEL,
+    material: { top: "water_source_top", side: "water_source_side", bottom: "water_source_bottom", texelSize: 16 },
+    behavior: DEFAULT_BEHAVIOR },
+  { id: "drain_channel", name: "Drain Channel", color: 0x6e7580, swatch: "#6e7580",
+    model: CUBE_MODEL,
+    material: { top: "drain_channel_top", side: "drain_channel_side", bottom: "drain_channel_bottom", texelSize: 16 },
+    behavior: DEFAULT_BEHAVIOR },
+  { id: "water_pipe_blue", name: "Water Pipe", color: 0x4a90c2, swatch: "#4a90c2",
+    model: CUBE_MODEL,
+    material: { top: "water_pipe_blue_top", side: "water_pipe_blue_side", bottom: "water_pipe_blue_bottom", texelSize: 16 },
+    behavior: DEFAULT_BEHAVIOR },
 ] as const;
 
 export type BlockId = typeof BLOCKS[number]["id"];
