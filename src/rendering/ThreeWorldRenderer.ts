@@ -155,7 +155,9 @@ export class ThreeWorldRenderer {
         opacity: block.id === "glass" ? 0.48 : 1,
       };
       // 程序化纹理（V042-007）：三面纹理可用时用材质数组 [side, side, top, bottom, side, side]
-      const texSet = generateTextureSet(block.id);
+      // DEV 性能 A/B：?flat=1 时跳过纹理，使用纯色材质（等价 V0.4.1 基线渲染路径）
+      const flatMode = import.meta.env.DEV && new URLSearchParams(window.location.search).has("flat");
+      const texSet = flatMode ? undefined : generateTextureSet(block.id);
       if (texSet) {
         const sideMat = new THREE.MeshStandardMaterial({ ...baseParams, map: texSet.side });
         const topMat = new THREE.MeshStandardMaterial({ ...baseParams, map: texSet.top });
@@ -204,6 +206,12 @@ export class ThreeWorldRenderer {
           getPlayerPosition: () => this.player.camera.position.toArray(),
           setPlayerPosition: (x: number, y: number, z: number) => this.player.camera.position.set(x, y, z),
           getLayerVisibility: (layerId: string) => this.layerPlugin.getLayerVisibility(layerId),
+          getRenderInfo: () => ({
+            drawCalls: this.renderer.info.render.calls,
+            triangles: this.renderer.info.render.triangles,
+            textures: this.renderer.info.memory.textures,
+            geometries: this.renderer.info.memory.geometries,
+          }),
           getSectionView: () => this.layerPlugin.getSectionView(),
           setLayerVisibility: (layerId: string, visible: boolean) => this.layerPlugin.setLayerVisibility(layerId, visible),
           setSectionView: (section: { enabled?: boolean; axis?: "x" | "y" | "z"; coordinate?: number; keptSide?: "positive" | "negative" }) =>

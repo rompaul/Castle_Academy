@@ -20,11 +20,6 @@ const TEX_SIZE = 16;
 
 type PixelWriter = (x: number, y: number) => string; // 返回 CSS 颜色
 
-/** 将十六进制颜色解析为 [r, g, b] */
-function hexToRgb(hex: string): [number, number, number] {
-  const n = parseInt(hex.slice(1), 16);
-  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
-}
 
 /** 确定性伪随机数（同一 seed 稳定输出，避免每次运行纹理漂移） */
 function mulberry32(seed: number): () => number {
@@ -74,7 +69,7 @@ function grassSide(): HTMLCanvasElement {
   const rng = mulberry32(43);
   const greens = ["#79A943", "#6E9C3C", "#84B54C"];
   const browns = ["#80502F", "#8B6346", "#754a2a"];
-  return generateCanvas((x, y) => {
+  return generateCanvas((_x, y) => {
     if (y < 4) return greens[Math.floor(rng() * greens.length)];
     return browns[Math.floor(rng() * browns.length)];
   });
@@ -84,14 +79,14 @@ function grassSide(): HTMLCanvasElement {
 function darkSoil(): HTMLCanvasElement {
   const rng = mulberry32(44);
   const browns = ["#80502F", "#75482A", "#8A5A36", "#6E4326"];
-  return generateCanvas((x, y) => browns[Math.floor(rng() * browns.length)]);
+  return generateCanvas((_x, _y) => browns[Math.floor(rng() * browns.length)]);
 }
 
 /** Layered Stone：灰色层状石块（水平岩层 + 砌缝暗线） */
 function layeredStone(): HTMLCanvasElement {
   const rng = mulberry32(45);
   const grays = ["#8A8C8E", "#7E8284", "#94969A"];
-  return generateCanvas((x, y) => {
+  return generateCanvas((_x, y) => {
     // 每 4 行一个岩层，层间暗缝
     if (y % 4 === 0) return "#5F6365";
     // 层内偶有暗色裂纹
@@ -104,7 +99,7 @@ function layeredStone(): HTMLCanvasElement {
 function honeyOak(): HTMLCanvasElement {
   const rng = mulberry32(46);
   const tones = ["#B77A3E", "#C28548", "#AA7038"];
-  return generateCanvas((x, y) => {
+  return generateCanvas((_x, y) => {
     if (y % 5 === 0) return "#8A5A2E"; // 板缝
     if (rng() < 0.06) return "#9A6636"; // 木纹纤维
     return tones[Math.floor(rng() * tones.length)];
@@ -129,7 +124,7 @@ function clayBrick(): HTMLCanvasElement {
 function foundationConcrete(): HTMLCanvasElement {
   const rng = mulberry32(48);
   const grays = ["#C0C0C0", "#B8B8B8", "#C8C8C8", "#BEBEBE"];
-  return generateCanvas((x, y) => grays[Math.floor(rng() * grays.length)]);
+  return generateCanvas((_x, _y) => grays[Math.floor(rng() * grays.length)]);
 }
 
 /** Window Frame side：木框 + 中心蓝色玻璃窗格 */
@@ -163,7 +158,7 @@ function stairStoneSide(): HTMLCanvasElement {
 function gravel(): HTMLCanvasElement {
   const rng = mulberry32(51);
   const lightGrays = ["#B5B5B5", "#A8A8A8", "#C2C2C2"];
-  return generateCanvas((x, y) => {
+  return generateCanvas((_x, _y) => {
     if (rng() < 0.15) return "#787878"; // 颗粒间阴影，增强对比
     return lightGrays[Math.floor(rng() * lightGrays.length)];
   });
@@ -173,7 +168,7 @@ function gravel(): HTMLCanvasElement {
 function warmSandstone(): HTMLCanvasElement {
   const rng = mulberry32(52);
   const tones = ["#D4C49E", "#CCBC96", "#DCCEA8"];
-  return generateCanvas((x, y) => {
+  return generateCanvas((_x, y) => {
     if (y % 6 === 0) return "#B8A87E"; // 层缝
     return tones[Math.floor(rng() * tones.length)];
   });
@@ -183,7 +178,7 @@ function warmSandstone(): HTMLCanvasElement {
 function slateTile(): HTMLCanvasElement {
   const rng = mulberry32(53);
   const tones = ["#454D5B", "#3E4652", "#4C5564"];
-  return generateCanvas((x, y) => {
+  return generateCanvas((_x, y) => {
     if (y % 4 === 0) return "#323A46"; // 瓦缝
     return tones[Math.floor(rng() * tones.length)];
   });
@@ -193,7 +188,7 @@ function slateTile(): HTMLCanvasElement {
 function walnutTimber(): HTMLCanvasElement {
   const rng = mulberry32(54);
   const tones = ["#70452E", "#7A4C34", "#663E28"];
-  return generateCanvas((x, y) => {
+  return generateCanvas((_x, y) => {
     if (y % 5 === 0) return "#52321F"; // 板缝
     if (rng() < 0.06) return "#5E3A24"; // 木纹
     return tones[Math.floor(rng() * tones.length)];
@@ -231,7 +226,7 @@ function mossRock(): HTMLCanvasElement {
 function plasterWall(): HTMLCanvasElement {
   const rng = mulberry32(57);
   const tones = ["#E8E8D8", "#E0E0D0", "#EDEDDF"];
-  return generateCanvas((x, y) => {
+  return generateCanvas((_x, y) => {
     if (y >= 13) return "#8A5A2E"; // 底部踢脚线
     return tones[Math.floor(rng() * tones.length)];
   });
@@ -272,7 +267,7 @@ function tunnelLining(): HTMLCanvasElement {
 function pillarSide(): HTMLCanvasElement {
   const rng = mulberry32(60);
   const grays = ["#8A8C8E", "#7E8284"];
-  return generateCanvas((x, y) => {
+  return generateCanvas((x, _y) => {
     if (x === 4 || x === 11) return "#5F6365"; // 竖向凹槽
     if (rng() < 0.08) return "#6B6F71";
     return grays[Math.floor(rng() * grays.length)];
@@ -311,9 +306,9 @@ function soilBottom(): HTMLCanvasElement {
 /* ---------- 纹理注册表 ---------- */
 
 interface TextureSet {
-  top: HTMLCanvasElement;
-  side: HTMLCanvasElement;
-  bottom: HTMLCanvasElement;
+  top: THREE.CanvasTexture;
+  side: THREE.CanvasTexture;
+  bottom: THREE.CanvasTexture;
 }
 
 /**
@@ -416,6 +411,11 @@ export function generateTextureSet(blockId: string): TextureSet | undefined {
 /** 纹理注册表是否包含指定方块（供测试与诊断）。 */
 export function hasTextureSet(blockId: string): boolean {
   return GENERATORS[`${blockId}:top`] !== undefined;
+}
+
+/** 纹理注册表是否包含指定方块的指定面（供 V042-013 资产校验，不依赖 DOM）。 */
+export function hasFaceTexture(blockId: string, face: "top" | "side" | "bottom"): boolean {
+  return GENERATORS[`${blockId}:${face}`] !== undefined;
 }
 
 /** 拥有纹理集的全部方块 ID 列表（去重，供测试与诊断）。 */
