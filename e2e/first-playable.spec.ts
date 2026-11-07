@@ -29,9 +29,10 @@ test("places, rejects duplicate placement, removes, and resets blocks", async ({
 test("keyboard movement updates the player position", async ({ page }) => {
   await page.goto("/");
   const before = await page.evaluate(() => (window as any).__CASTLE_TEST__.getPlayerPosition() as number[]);
-  await page.keyboard.down("w");
+  // V0.5 起，出生点正前方是护城河外墙（z=6），改用向后（+z，无遮挡）验证移动
+  await page.keyboard.down("s");
   await page.waitForTimeout(250);
-  await page.keyboard.up("w");
+  await page.keyboard.up("s");
   const after = await page.evaluate(() => (window as any).__CASTLE_TEST__.getPlayerPosition() as number[]);
   expect(Math.hypot(after[0] - before[0], after[2] - before[2])).toBeGreaterThan(0.1);
 });
@@ -75,16 +76,16 @@ test("places new V0.4.2 block IDs (foundation_concrete, window_frame, stair_ston
   expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.placeBlock(2, 1, 0, "foundation_concrete"))).toBe(true);
   expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(2, 1, 0))).toBe(true);
 
-  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.placeBlock(4, 1, 0, "window_frame"))).toBe(true);
-  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(4, 1, 0))).toBe(true);
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.placeBlock(0, 1, 2, "window_frame"))).toBe(true);
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(0, 1, 2))).toBe(true);
 
-  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.placeBlock(6, 1, 0, "stair_stone"))).toBe(true);
-  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(6, 1, 0))).toBe(true);
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.placeBlock(0, 1, -2, "stair_stone"))).toBe(true);
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(0, 1, -2))).toBe(true);
 
   // 重置后所有块应消失
   await page.evaluate(() => (window as any).__CASTLE_TEST__.reset());
   expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.getBlockCount())).toBe(initialCount);
   expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(2, 1, 0))).toBe(false);
-  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(4, 1, 0))).toBe(false);
-  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(6, 1, 0))).toBe(false);
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(0, 1, 2))).toBe(false);
+  expect(await page.evaluate(() => (window as any).__CASTLE_TEST__.hasBlock(0, 1, -2))).toBe(false);
 });

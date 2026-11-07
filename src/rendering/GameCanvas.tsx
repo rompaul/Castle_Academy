@@ -10,6 +10,7 @@ import type { BlueprintPlugin } from "../plugins/blueprint/BlueprintPlugin";
 import type { MeasurementPlugin } from "../plugins/measurement/MeasurementPlugin";
 import type { LayerPlugin } from "../plugins/layers/LayerPlugin";
 import type { ViewMode, SectionViewState } from "../plugins/layers/LayerTypes";
+import type { QuestState } from "../plugins/learning/castleQuests";
 
 export interface GameActions {
   reset: () => void;
@@ -22,6 +23,7 @@ export interface GameActions {
   measurement: MeasurementPlugin;
   layerPlugin: LayerPlugin;
   reloadFromWorld: () => void;
+  getQuests: () => QuestState[];
 }
 
 interface Props {
@@ -89,7 +91,8 @@ export function GameCanvas({ selectedBlock, onPlayingChange, onMessage, onPersis
       blueprint: engine.blueprint,
       measurement: engine.measurement,
       layerPlugin: engine.layerPlugin,
-      reloadFromWorld: () => engine.reloadFromWorld()
+      reloadFromWorld: () => engine.reloadFromWorld(),
+      getQuests: () => engine.questPlugin.getQuests()
     };
 
     // Persist layer/section view state whenever it changes (V0.4).

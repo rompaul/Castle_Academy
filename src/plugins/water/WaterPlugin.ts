@@ -85,7 +85,7 @@ export class WaterPlugin {
       })
     );
     this.timer = setInterval(() => this.tick(), this.config.tickIntervalMs);
-    this.markDirty(); // 激活时做首次重算
+    this.refresh(); // 激活时重算并立即收敛（种子世界的预置水域首帧可见）
   }
 
   dispose(): void {
@@ -192,6 +192,12 @@ export class WaterPlugin {
       added.push(item.position);
     }
 
+    // 收敛标记必须在发射事件之前更新：事件监听者（任务判定等）在回调里
+    // 同步查询 isConverged()，若发射后才清 dirty 会导致它们永远看到"未收敛"。
+    if (this.pendingAdded.length === 0 && this.pendingRemoved.length === 0) {
+      this.dirty = false;
+    }
+
     if (added.length > 0 || removed.length > 0) {
       this.events.emit("water.flow.updated", {
         added,
@@ -213,9 +219,6 @@ export class WaterPlugin {
       activeCells: this.applied.size,
       pendingOps: this.pendingAdded.length + this.pendingRemoved.length,
     });
-    if (this.pendingAdded.length === 0 && this.pendingRemoved.length === 0) {
-      this.dirty = false;
-    }
   }
 }
 

@@ -12,6 +12,8 @@ import { LayerRegistry } from "../plugins/layers/LayerRegistry";
 import { LayerRenderAdapter } from "./LayerRenderAdapter";
 import { WaterPlugin, type WaterFlowUpdatedPayload } from "../plugins/water/WaterPlugin";
 import { WaterRenderAdapter } from "./WaterRenderAdapter";
+import { CastleQuestPlugin } from "../plugins/learning/CastleQuestPlugin";
+import { buildCastleWaterStage } from "../plugins/learning/castleStage";
 import { buildBlockAtlas, createBlockGeometry, type BlockAtlas } from "./textureGenerator";
 import type { LayerKind, SectionViewState } from "../plugins/layers/LayerTypes";
 import { EventBus } from "../core/events/EventBus";
@@ -31,6 +33,7 @@ export class ThreeWorldRenderer {
   readonly layerPlugin: LayerPlugin;
   readonly layerRenderAdapter: LayerRenderAdapter;
   readonly waterPlugin: WaterPlugin;
+  readonly questPlugin: CastleQuestPlugin;
   private readonly waterRenderAdapter: WaterRenderAdapter;
   private readonly blockMeshes = new Map<string, THREE.Mesh>();
   private lineStart: GridPosition | null = null;
@@ -132,6 +135,7 @@ export class ThreeWorldRenderer {
 
     // V0.5 水模拟插件：WorldState 是唯一事实源，水格是 WaterPlugin 的派生状态
     this.waterPlugin = new WaterPlugin(this.world, this.events);
+    this.questPlugin = new CastleQuestPlugin(this.waterPlugin, this.events);
     this.waterRenderAdapter = new WaterRenderAdapter(this.layerRenderAdapter, (y) =>
       this.layerPlugin.resolveLayerId(y) ?? this.layerPlugin.getDefaultLayerId() ?? "ground"
     );
@@ -215,6 +219,7 @@ export class ThreeWorldRenderer {
     this.renderer.domElement.addEventListener("pointermove", this.onPointerMove);
     this.seedWorld();
     this.waterPlugin.activate();
+    this.questPlugin.activate();
     if (import.meta.env.DEV) {
       Object.assign(window, {
         __CASTLE_TEST__: {
@@ -242,6 +247,7 @@ export class ThreeWorldRenderer {
             isConverged: this.waterPlugin.getQuery().isConverged(),
             hasWater: (x: number, y: number, z: number) => this.waterPlugin.getQuery().hasWater({ x, y, z }),
           }),
+          getQuests: () => this.questPlugin.getQuests(),
           placeWaterSource: (x: number, y: number, z: number) => this.addBlock({ x, y, z }, "water_source"),
           removeWaterSource: (x: number, y: number, z: number) => this.removeBlock({ x, y, z })
         }
@@ -276,6 +282,10 @@ export class ThreeWorldRenderer {
         }
       }
     }
+
+    // V0.5 城堡水务舞台：护城河 / 水井 / 地牢积水池（幂等，布局见 castleStage.ts）
+    // 舞台是静态地形：不投射阴影（shadow pass caster 数量从 ~330 降回 ~90，保住帧率）
+    buildCastleWaterStage((position, blockId) => this.addBlock(position, blockId, false));
   }
 
   private key(position: GridPosition): string {
@@ -296,13 +306,13 @@ export class ThreeWorldRenderer {
     return this.blockGeometries.get(blockId) ?? this.geometry;
   }
 
-  private addBlock(position: GridPosition, blockId: BlockId): boolean {
+  private addBlock(position: GridPosition, blockId: BlockId, castShadow = true): boolean {
     if (!this.building.place(position, blockId)) return false;
     const layerId = this.layerPlugin.resolveLayerId(position.y) ?? this.layerPlugin.getDefaultLayerId() ?? "ground";
     const material = this.resolveMaterial(blockId);
     const mesh = new THREE.Mesh(this.resolveGeometry(blockId), material);
     mesh.position.set(position.x, position.y + 0.5, position.z);
-    mesh.castShadow = true;
+    mesh.castShadow = castShadow;
     mesh.receiveShadow = true;
     mesh.userData.kind = "block";
     mesh.userData.position = position;
@@ -351,6 +361,7 @@ export class ThreeWorldRenderer {
     this.layerRenderAdapter.applyAllLayerVisibility();
     this.applySectionView(this.layerPlugin.getSectionView());
     this.waterPlugin.refresh(); // 存档加载/蓝图放置后重算水域（水格是派生状态）
+    this.questPlugin.resetEvaluation(); // 新世界重新开始任务判定
   }
 
   /** 根据当前剖面状态设置单个 mesh 的显隐。 */
@@ -571,6 +582,7 @@ export class ThreeWorldRenderer {
     this.outline.visible = false;
     this.seedWorld();
     this.waterPlugin.activate();
+    this.questPlugin.activate();
     this.waterPlugin.refresh();
     this.player.reset();
     this.onMessage("World reset.");
@@ -585,6 +597,7 @@ export class ThreeWorldRenderer {
     this.renderer.domElement.removeEventListener("pointermove", this.onPointerMove);
     this.player.dispose();
     this.waterPlugin.dispose();
+    this.questPlugin.dispose();
     this.waterRenderAdapter.dispose();
     this.unsubscribeLayerEvents.forEach((unsub) => unsub());
     if (import.meta.env.DEV) delete (window as Window & { __CASTLE_TEST__?: unknown }).__CASTLE_TEST__;

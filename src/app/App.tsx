@@ -6,6 +6,12 @@ import { BLOCKS, type BlockId } from "../core/world/blocks";
 import { Hotbar } from "../ui/Hotbar";
 import { HelpPanel } from "../ui/HelpPanel";
 import type { SectionViewState } from "../plugins/layers/LayerTypes";
+import {
+  ALL_QUESTS_COMPLETE_EVENT,
+  QUEST_COMPLETED_EVENT,
+  QUEST_UPDATED_EVENT,
+  type QuestState
+} from "../plugins/learning/castleQuests";
 
 export function App() {
   const [selectedBlock, setSelectedBlock] = useState<BlockId>("grass");
@@ -88,6 +94,21 @@ export function App() {
     toastTimerRef.current = window.setTimeout(() => setMessage((current) => current === text ? "" : current), 2600);
   }, []);
 
+  // 城堡水务任务（V0.5）：订阅任务事件驱动面板与完成 toast
+  const [quests, setQuests] = useState<QuestState[]>([]);
+  useEffect(() => {
+    const game = gameRef.current;
+    if (!game) return;
+    setQuests(game.getQuests());
+    const events = game.events;
+    const unsubs = [
+      events.on<{ quests: QuestState[] }>(QUEST_UPDATED_EVENT, (e) => setQuests(e.payload.quests)),
+      events.on<{ successMessage: string }>(QUEST_COMPLETED_EVENT, (e) => showMessage(e.payload.successMessage)),
+      events.on(ALL_QUESTS_COMPLETE_EVENT, () => showMessage("👑 陛下赐你'城堡水务大师'称号！三项水务任务全部完成！"))
+    ];
+    return () => unsubs.forEach((unsub) => unsub());
+  }, [gameRef.current, showMessage]);
+
   useEffect(() => () => {
     if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
   }, []);
@@ -127,7 +148,7 @@ export function App() {
           </div>
         </div>
         <div className="topbar-right">
-          <span className="version-pill">V0.4</span>
+          <span className="version-pill">V0.5</span>
           <button className="subtle-button" onClick={() => setLayerPanelOpen((v) => !v)}>
             {layerPanelOpen ? "Hide layers" : "Layers"}
           </button>
@@ -209,6 +230,25 @@ export function App() {
           </div>
         </div>
       </header>
+
+      {quests.length > 0 && (
+        <div className="quest-panel" role="region" aria-label="Castle water quests">
+          <div className="quest-panel-header">🏰 城堡水务任务</div>
+          {quests.map((quest) => (
+            <div key={quest.id} className={`quest-item ${quest.complete ? "quest-done" : ""}`} title={quest.hint}>
+              <div className="quest-item-title">
+                {quest.complete ? "✅" : quest.direction === "fill" ? "💧" : "🛠️"} {quest.title}
+              </div>
+              {!quest.complete && <div className="quest-item-brief">{quest.briefing}</div>}
+              {!quest.complete && (
+                <div className="quest-bar">
+                  <div className="quest-bar-fill" style={{ width: `${Math.round(quest.progress * 100)}%` }} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {layerPanelOpen && gameRef.current?.layerPlugin && (
         <div className="layer-panel" role="region" aria-label="Layer controls">
