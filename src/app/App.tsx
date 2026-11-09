@@ -96,6 +96,8 @@ export function App() {
 
   // 城堡水务任务（V0.5）：订阅任务事件驱动面板与完成 toast
   const [quests, setQuests] = useState<QuestState[]>([]);
+  // 悬停水信息（Scope 成果 7）：渲染器 raycast 后回传状态文本
+  const [hoverInfo, setHoverInfo] = useState<string | null>(null);
   useEffect(() => {
     const game = gameRef.current;
     if (!game) return;
@@ -104,7 +106,8 @@ export function App() {
     const unsubs = [
       events.on<{ quests: QuestState[] }>(QUEST_UPDATED_EVENT, (e) => setQuests(e.payload.quests)),
       events.on<{ successMessage: string }>(QUEST_COMPLETED_EVENT, (e) => showMessage(e.payload.successMessage)),
-      events.on(ALL_QUESTS_COMPLETE_EVENT, () => showMessage("👑 陛下赐你'城堡水务大师'称号！三项水务任务全部完成！"))
+      events.on(ALL_QUESTS_COMPLETE_EVENT, () => showMessage("👑 陛下赐你'城堡水务大师'称号！三项水务任务全部完成！")),
+      events.on<{ text: string | null }>("world.hover.info", (e) => setHoverInfo(e.payload.text))
     ];
     return () => unsubs.forEach((unsub) => unsub());
   }, [gameRef.current, showMessage]);
@@ -225,6 +228,7 @@ export function App() {
               const check = m.checkChallenge(result);
               setMeasurementResult(check.message);
               showMessage(check.message);
+              gameRef.current?.events.emit("measurement.used", { tool: "distance" });
             }}>Check challenge</button>
             {measurementResult && <span className="tool-hint">{measurementResult}</span>}
           </div>
@@ -248,6 +252,10 @@ export function App() {
             </div>
           ))}
         </div>
+      )}
+
+      {hoverInfo && (
+        <div className="hover-info" role="status">{hoverInfo}</div>
       )}
 
       {layerPanelOpen && gameRef.current?.layerPlugin && (
@@ -400,7 +408,7 @@ export function App() {
       </section>
 
       <footer className="footer">
-        <span>CASTLE ACADEMY <b>V0.4</b></span>
+        <span>CASTLE ACADEMY <b>V0.5</b></span>
         <span>BUILD FIRST. SIMULATE NEXT. LEARN THROUGH BUILDING.</span>
         <span>LOCAL CREATIVE WORLD</span>
       </footer>

@@ -25,6 +25,8 @@ export class CastleQuestPlugin {
   private readonly completed = new Set<string>();
   /** 曾经积过水的 drain 任务（防伪完成：没见过水的区域不算"已排干"） */
   private readonly everWet = new Set<string>();
+  /** 水井任务的测量门槛：玩家至少用过一次测量工具（measurement.used 事件） */
+  private measurementUsed = false;
   private allCompletedNotified = false;
   private active = false;
   private readonly unsubscribe: Array<() => void> = [];
@@ -38,7 +40,13 @@ export class CastleQuestPlugin {
     if (this.active) return;
     this.active = true;
     this.unsubscribe.push(
-      this.events.on("water.flow.updated", () => this.evaluate())
+      this.events.on("water.flow.updated", () => this.evaluate()),
+      this.events.on("measurement.used", () => {
+        if (!this.measurementUsed) {
+          this.measurementUsed = true;
+          this.evaluate();
+        }
+      })
     );
     this.evaluate(); // 激活时给出初始面板状态
   }
@@ -52,7 +60,7 @@ export class CastleQuestPlugin {
 
   /** 当前任务状态快照（UI 初始化用） */
   getQuests(): QuestState[] {
-    return evaluateQuests(this.water.getQuery(), this.everWet);
+    return evaluateQuests(this.water.getQuery(), this.everWet, this.measurementUsed);
   }
 
   /** 全部任务是否完成 */
@@ -76,7 +84,7 @@ export class CastleQuestPlugin {
         this.everWet.add(definition.id);
       }
     }
-    const quests = evaluateQuests(query, this.everWet);
+    const quests = evaluateQuests(query, this.everWet, this.measurementUsed);
     this.events.emit<QuestUpdatedPayload>(QUEST_UPDATED_EVENT, { quests });
 
     for (const quest of quests) {

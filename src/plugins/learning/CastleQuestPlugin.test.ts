@@ -147,11 +147,15 @@ describe("CastleQuestPlugin（事件层）", () => {
     expect(moat.progress).toBe(1);
   });
 
-  it("水井任务：塔顶放水源灌满井筒", () => {
+  it("水井任务：塔顶放水源灌满井筒（需先用过测量工具）", () => {
     buildCastleWaterStage((pos, id) => world.place(pos, id));
     settle(water);
     world.place(p(7, 2, 0), "water_source");
     settle(water);
+    // 测量门槛（F-2 修复）：未测量时水井不得完成
+    const locked = quests.getQuests().find((q) => q.id === "quest-well")!;
+    expect(locked.complete).toBe(false);
+    events.emit("measurement.used", { tool: "distance" });
     const well = quests.getQuests().find((q) => q.id === "quest-well")!;
     expect(well.complete).toBe(true);
   });

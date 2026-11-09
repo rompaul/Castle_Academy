@@ -1,0 +1,150 @@
+{
+  "results": [
+    {
+      "id": "AC-101",
+      "name": "水源放置：方块入世界、周围按规则出水",
+      "status": "PASS",
+      "detail": "source=true E/W/N/S水=[true,true,true,true]"
+    },
+    {
+      "id": "AC-103",
+      "name": "水平扩散上限 ≤7，不无限漫灌",
+      "status": "PASS",
+      "detail": "水格数=78（内区理论79，缺=[\"-6,1,-14\",\"-6,1,-13\",\"-6,1,-9\",\"-6,1,-8\",\"-5,1,-14\",\"-5,1,-8\",\"5,1,-14\",\"5,1,-8\",\"6,1,-14\",\"6,1,-13\",\"6,1,-9\",\"6,1,-8\"]）最大曼哈顿距离=7 全部位于y=1=true"
+    },
+    {
+      "id": "AC-103b",
+      "name": "扩散边界精确性（7格可达/8格不可达）",
+      "status": "PASS",
+      "detail": "{\"d7wet\":true,\"d8dry\":true,\"x6wet\":true,\"wallDry\":true}"
+    },
+    {
+      "id": "AC-104",
+      "name": "扩散遇固体：被墙阻挡、不穿墙、不覆盖方块",
+      "status": "PASS",
+      "detail": "墙格(7,1,-11)与墙外(8,1,-11)均无水=true，墙内侧(6,1,-11)有水=true"
+    },
+    {
+      "id": "AC-105",
+      "name": "水中放置：放置成功、该格水消失",
+      "status": "PASS",
+      "detail": "原水格=true 放置后block=true water=false"
+    },
+    {
+      "id": "AC-109",
+      "name": "撤源退水：移除唯一水源后全部退去无残留",
+      "status": "PASS",
+      "detail": "剩余水格=0（预期0）"
+    },
+    {
+      "id": "AC-102",
+      "name": "垂直下落：沿同列直到底部边界",
+      "status": "PASS",
+      "detail": "y=4..-32全有水=true 底部(-32)=true 越界无=true 无侧向扩散=true"
+    },
+    {
+      "id": "AC-106",
+      "name": "排水渠吸收：渠吃水且水不越过继续扩散",
+      "status": "PASS",
+      "detail": "{\"drainIsBlock\":true,\"drainDry\":true,\"beyondDry\":true,\"southWet\":true,\"eastWet\":true}"
+    },
+    {
+      "id": "AC-107",
+      "name": "管道连通：链上通水、出水口出水、装饰管道不出水",
+      "status": "PASS",
+      "detail": "{\"outletWet\":true,\"outletBelowDry\":true,\"pipeDry\":true,\"decoDry\":true}"
+    },
+    {
+      "id": "AC-108",
+      "name": "管道断开：移除中段后下游停止出水",
+      "status": "PASS",
+      "detail": "{\"outletDry\":true,\"nearPipeStillOutputs\":true,\"farPipeDry\":true}"
+    },
+    {
+      "id": "AC-110",
+      "name": "多源重算：结果=单源并集；移除其一公共区水不消失",
+      "status": "PASS",
+      "detail": "|A|=64 |AB|=89 |B|=64 A⊆AB=true B⊆AB=true AB=A∪B=true 公共格(0,1,-11)保留=true"
+    },
+    {
+      "id": "AC-111",
+      "name": "图层显隐兼容：水 mesh 隐藏/恢复、数据不变",
+      "status": "PASS",
+      "detail": "隐藏后visibility=false 数据不变=true 恢复后不变=true（水格数=47）；mesh 级视觉以截图 05/06 为证"
+    },
+    {
+      "id": "AC-112",
+      "name": "剖面兼容：水与方块同侧裁切、退出恢复、数据不变",
+      "status": "PASS",
+      "detail": "剖面生效=true 数据不变=true 退出后不变=true（视觉以截图 07 为证）"
+    },
+    {
+      "id": "S7-init",
+      "name": "任务初始状态：护城河/水井 0 进度；地牢不伪完成且真实积水",
+      "status": "PASS",
+      "detail": "moat=0 well=0 dungeonComplete=false dungeonRegionWet=true"
+    },
+    {
+      "id": "AC-117",
+      "name": "学习任务1 注满护城河：充水判定+completed 状态+toast",
+      "status": "PASS",
+      "detail": "progress=1 complete=true toast出现=true"
+    },
+    {
+      "id": "AC-118",
+      "name": "学习任务2 城堡水井：井筒充水判定",
+      "status": "PASS",
+      "detail": "progress=1 complete=true 井筒充水=true（注：测量联动未与判定耦合，见报告说明）"
+    },
+    {
+      "id": "AC-119",
+      "name": "学习任务3 地牢告急：排水判定+V0.4 剖面/图层交互",
+      "status": "PASS",
+      "detail": "progress=1 complete=true 牢房区无水=true 完成toast=true"
+    },
+    {
+      "id": "AC-115a",
+      "name": "存档 JSON：version=1、无水模拟字段泄漏",
+      "status": "PASS",
+      "detail": "keys=[\"version\",\"blocks\"] version=1 block字段合法=true 泄漏字段=[] 含water_source方块=true"
+    },
+    {
+      "id": "AC-115b",
+      "name": "存档兼容（新）：保存→reset→加载，水状态重放一致",
+      "status": "PASS",
+      "detail": "保存时水格=78 加载后=78 完全一致=true 与纯reset状态不同=true"
+    },
+    {
+      "id": "AC-114",
+      "name": "存档兼容（旧）：V0.4.2 快照方块不变、无水生成",
+      "status": "PASS",
+      "detail": "三块恢复=true,true,true 水格=0（旧存档世界被整体替换，无水源→无水）"
+    },
+    {
+      "id": "AC-119b",
+      "name": "空世界防伪完成：无水世界中地牢任务不得判完成",
+      "status": "PASS",
+      "detail": "dungeonComplete=false"
+    },
+    {
+      "id": "AC-116",
+      "name": "模拟不卡帧：≥500 水格、分批 tick 应用、无 >100ms 长帧",
+      "status": "PASS",
+      "detail": "水格=2589（≥500）放源后立即收敛=false（false=增量分批应用）帧平均=24.3ms 最大=50.0ms（≤100ms）帧=120（swiftshader 软渲染环境）"
+    },
+    {
+      "id": "UI-hotbar",
+      "name": "热栏包含水方块条目（水源/排水渠/管道）",
+      "status": "PASS",
+      "detail": "{\"Water Source\":true,\"Drain Channel\":true,\"Water Pipe\":true}"
+    },
+    {
+      "id": "UI-questpanel",
+      "name": "任务面板可见、标题正确",
+      "status": "PASS",
+      "detail": "面板=true 标题=true footer=\"CASTLE ACADEMY V0.4BUILD FIRST. SIMULATE NEXT. LEARN THROUGH\" versionPill=\"V0.5\""
+    }
+  ],
+  "pageErrors": [],
+  "consoleErrors": []
+}

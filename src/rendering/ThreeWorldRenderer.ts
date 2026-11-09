@@ -504,6 +504,7 @@ export class ThreeWorldRenderer {
     if (!hit) {
       this.targetPosition = null;
       this.outline.visible = false;
+      this.emitHoverInfo(null);
       return;
     }
 
@@ -512,6 +513,7 @@ export class ThreeWorldRenderer {
       this.targetPosition = position;
       this.outline.position.set(position.x, position.y + 0.5, position.z);
       this.outline.visible = true;
+      this.emitHoverInfo(this.describeWaterAt(position));
     } else {
       const point = hit.point;
       this.targetPosition = {
@@ -521,7 +523,33 @@ export class ThreeWorldRenderer {
       };
       this.outline.position.set(this.targetPosition.x, 0.5, this.targetPosition.z);
       this.outline.visible = true;
+      this.emitHoverInfo(this.describeWaterAt(this.targetPosition));
     }
+  }
+
+  /** Scope 成果 7：悬停时描述水相关状态（水源/渠/管道通水/此处有水）。 */
+  private describeWaterAt(position: GridPosition): string | null {
+    const query = this.waterPlugin.getQuery();
+    const blockId = this.world.get(position)?.blockId;
+    if (blockId === "water_source") return "💧 水源方块 · 水从这里流出";
+    if (blockId === "drain_channel") return "🛠️ 排水渠 · 吸收流经的水";
+    if (blockId === "water_pipe_blue") {
+      return query.isPipeFlowing(position) ? "🚰 水管 · 已通水" : "🚰 水管 · 未通水（检查是否连通水源）";
+    }
+    if (query.hasWater(position)) return "💧 此处有水";
+    // 悬停方块上方一格有水（如被水淹没的地面）
+    const above = { x: position.x, y: position.y + 1, z: position.z };
+    if (query.hasWater(above)) return "💧 上方有水";
+    return null;
+  }
+
+  private lastHoverText: string | null = null;
+
+  /** 仅在文本变化时发射，避免 pointermove 高频刷事件。 */
+  private emitHoverInfo(text: string | null): void {
+    if (text === this.lastHoverText) return;
+    this.lastHoverText = text;
+    this.events.emit("world.hover.info", { text });
   }
 
   private adjacentPosition(): GridPosition | null {

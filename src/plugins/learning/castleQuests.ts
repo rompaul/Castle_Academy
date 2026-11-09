@@ -94,16 +94,22 @@ export interface QuestCompletedPayload {
  * @param everWet 曾经积过水的 drain 任务 ID 集合——drain 任务必须先见过水才算完成
  *        （否则空世界/未建舞台时"本来就没水"会被伪完成）。
  */
-export function evaluateQuests(query: WaterQuery, everWet: ReadonlySet<string> = new Set()): QuestState[] {
+export function evaluateQuests(
+  query: WaterQuery,
+  everWet: ReadonlySet<string> = new Set(),
+  measurementDone = false
+): QuestState[] {
   return QUEST_DEFINITIONS.map((definition) => {
     const wet = definition.region.filter((cell) => query.hasWater(cell)).length;
     const progress =
       definition.direction === "fill"
         ? Math.min(wet / Math.ceil(definition.threshold * definition.region.length), 1)
         : 1 - wet / definition.region.length;
+    // 城堡水井：必须先用测量工具量过高差（测量→规划→建造→验证 的完整循环）
+    const measurementGate = definition.id === "quest-well" && !measurementDone;
     const complete =
       definition.direction === "fill"
-        ? wet >= Math.ceil(definition.threshold * definition.region.length)
+        ? !measurementGate && wet >= Math.ceil(definition.threshold * definition.region.length)
         : wet === 0 && everWet.has(definition.id);
     return {
       id: definition.id,

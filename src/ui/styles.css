@@ -263,3 +263,19 @@ kbd { min-width: 73px; padding: 5px 6px; color: #e8d39e; background: rgba(255,25
   background: linear-gradient(90deg, #3b7dd8, #58b0e8);
   transition: width 0.4s ease;
 }
+
+/* V0.5 悬停水信息（Scope 成果 7） */
+.hover-info {
+  position: fixed;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%);
+  background: rgba(24, 30, 38, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  padding: 4px 10px;
+  color: #cfe4f5;
+  font-size: 12px;
+  z-index: 30;
+  pointer-events: none;
+}
