@@ -55,7 +55,7 @@ export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
     id: "quest-well",
     title: "城堡水井",
     briefing: "庭院水井见底，厨房马厩都在喊渴。想办法把水送进东侧石塔的井筒。",
-    hint: "在塔顶开口正上方放水源，水会灌满井筒；或用管道从远处把水引过来。",
+    hint: "先用顶栏 Measure 量一次高差（解锁判定）；再在塔顶开口正上方放水源灌满井筒，或用管道从远处引水。",
     successMessage: "水井汩汩冒水，今晚大厅能炖汤了！",
     direction: "fill",
     region: WELL_SHAFT_CELLS,

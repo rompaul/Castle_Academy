@@ -279,3 +279,17 @@ kbd { min-width: 73px; padding: 5px 6px; color: #e8d39e; background: rgba(255,25
   z-index: 30;
   pointer-events: none;
 }
+.quest-item-hint {
+  margin: 2px 0 4px;
+  line-height: 1.4;
+  color: #9fc9ec;
+  font-size: 11px;
+}
+.quest-panel-footer {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  opacity: 0.65;
+  font-size: 11px;
+  line-height: 1.5;
+}

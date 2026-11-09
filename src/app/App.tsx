@@ -244,6 +244,7 @@ export function App() {
                 {quest.complete ? "✅" : quest.direction === "fill" ? "💧" : "🛠️"} {quest.title}
               </div>
               {!quest.complete && <div className="quest-item-brief">{quest.briefing}</div>}
+              {!quest.complete && <div className="quest-item-hint">👉 {quest.hint}</div>}
               {!quest.complete && (
                 <div className="quest-bar">
                   <div className="quest-bar-fill" style={{ width: `${Math.round(quest.progress * 100)}%` }} />
@@ -251,6 +252,9 @@ export function App() {
               )}
             </div>
           ))}
+          <div className="quest-panel-footer">
+            💡 左下角热栏选方块，左键放置 / 右键拆除；瞄准方块可查看水信息；顶栏 Measure 可量高差
+          </div>
         </div>
       )}
 
