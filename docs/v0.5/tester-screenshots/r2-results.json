@@ -1,0 +1,84 @@
+{
+  "results": [
+    {
+      "id": "R2-F1",
+      "name": "页脚版本号应为 CASTLE ACADEMY V0.5",
+      "status": "PASS",
+      "detail": "footer=\"CASTLE ACADEMY V0.5BUILD FIRST. SIMULATE NEXT. LEARN THROUGH BUILDING.LOCAL CREATIVE WORLD\" versionPill=\"V0.5\""
+    },
+    {
+      "id": "R2-F3-pre",
+      "name": "悬停舞台前置条件（池水/上方水/出水口）",
+      "status": "PASS",
+      "detail": "{\"poolWet\":true,\"aboveWet\":true,\"outletWet\":true,\"sourcePlaced\":true,\"isolatedPipe\":true}"
+    },
+    {
+      "id": "R2-F3a",
+      "name": "悬停水源方块 → 水源提示",
+      "status": "PASS",
+      "detail": "aim面=front 命中格=(-3,1,0) hover-info=\"💧 水源方块 · 水从这里流出\" 屏幕=(439,408)"
+    },
+    {
+      "id": "R2-F3b",
+      "name": "悬停排水渠 → 排水渠提示",
+      "status": "PASS",
+      "detail": "aim面=front 命中格=(-2,1,0) hover-info=\"🛠️ 排水渠 · 吸收流经的水\" 屏幕=(467,408)"
+    },
+    {
+      "id": "R2-F3c",
+      "name": "悬停已连通水管 → 已通水",
+      "status": "PASS",
+      "detail": "aim面=front 命中格=(1,1,0) hover-info=\"🚰 水管 · 已通水\" 屏幕=(691,408)"
+    },
+    {
+      "id": "R2-F3d",
+      "name": "悬停孤立水管 → 未通水",
+      "status": "PASS",
+      "detail": "aim面=top 命中格=(3,1,1) hover-info=\"🚰 水管 · 未通水（检查是否连通水源）\" 屏幕=(851,347)"
+    },
+    {
+      "id": "R2-F3e",
+      "name": "悬停被淹方块 → 上方有水",
+      "status": "PASS",
+      "detail": "aim面=top 命中格=(0,0,1) hover-info=\"💧 上方有水\" 屏幕=(616,424)"
+    },
+    {
+      "id": "R2-F3g",
+      "name": "悬停无关方块 → 无提示（瞄准点经求交验证）",
+      "status": "PASS",
+      "detail": "aim面=front 命中格=(2,1,-1) hover-info=\"<null>\" 屏幕=(756,398)"
+    },
+    {
+      "id": "R2-F3f",
+      "name": "悬停有水格（池水地面）→ 此处有水",
+      "status": "PASS",
+      "detail": "aim=[-0.8,0,3.3] 命中=ground(-1,0,3) hover-info=\"💧 此处有水\" 屏幕=(543,603) 探针表=[{\"aim\":[-1,0,3],\"text\":\"💧 此处有水\"}]"
+    },
+    {
+      "id": "R2-F3-ui",
+      "name": "提示条位于页面底部中央（.hover-info fixed 水平居中、贴近底部）",
+      "status": "PASS",
+      "detail": "{\"position\":\"fixed\",\"rectCenterX\":640,\"rectBottom\":704,\"viewportW\":1280,\"viewportH\":800,\"text\":\"💧 此处有水\"}"
+    },
+    {
+      "id": "R2-F2",
+      "name": "游戏内水井任务：井筒充水但未测量不完成 → 测量后完成",
+      "status": "PASS",
+      "detail": "井筒充水=true 测量前complete=false 测量后complete=true progress=1"
+    },
+    {
+      "id": "R2-S1",
+      "name": "抽查：放水源→水流动→护城河任务面板推进完成",
+      "status": "PASS",
+      "detail": "初始progress=0 完成后progress=1 complete=true"
+    },
+    {
+      "id": "R2-S2",
+      "name": "抽查：保存→reset→加载后水域重放一致",
+      "status": "PASS",
+      "detail": "保存时水格=87 reset后=47 加载后=87 逐键一致=true"
+    }
+  ],
+  "pageErrors": [],
+  "consoleErrors": []
+}
