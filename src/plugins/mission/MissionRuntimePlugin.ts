@@ -194,10 +194,11 @@ export class MissionRuntimePlugin {
 
   /** 提示阶梯使用次数：只记录、不惩罚（V0.2 LEARNING_MODEL §6）。 */
   useHint(missionId: string): number {
-    const current = this.progressStore.get(missionId);
-    const next = (current?.hintsUsed ?? 0) + 1;
-    this.progressStore.set(missionId, { hintsUsed: next });
     const state = this.states.get(missionId);
+    // 无档案降级路径下 progressStore 不会持久化；此时以运行时状态为准继续累计
+    const stored = this.progressStore.get(missionId);
+    const next = (stored?.hintsUsed ?? state?.hintsUsed ?? 0) + 1;
+    this.progressStore.set(missionId, { hintsUsed: next });
     if (state) state.hintsUsed = next;
     return next;
   }

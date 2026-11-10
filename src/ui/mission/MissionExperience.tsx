@@ -3,10 +3,12 @@ import type { MutableRefObject } from "react";
 
 import type { GameActions } from "../../rendering/GameCanvas";
 import type { MissionSummary } from "../../content/missions/types";
+import { getMissionById } from "../../content/missions";
 import type { LearnerProfile } from "../../plugins/learner/types";
 import { MISSION_EVENTS, type MissionOfferedPayload } from "../../plugins/mission/events";
 import { LEARNER_EVENTS, type LearnerProfileRecoveredPayload } from "../../plugins/learner/types";
 import { MissionSidebar } from "./MissionSidebar";
+import { MissionDetailPanel } from "./MissionDetailPanel";
 
 interface Props {
   gameRef: MutableRefObject<GameActions | null>;
@@ -21,6 +23,8 @@ export function MissionExperience({ gameRef }: Props) {
   const [missions, setMissions] = useState<MissionSummary[]>([]);
   const [profile, setProfile] = useState<LearnerProfile | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [hintTick, setHintTick] = useState(0);
   const [pinned, setPinned] = useState(false);
   const [hovered, setHovered] = useState(false);
   /** 显式点击展开（与悬停展开分开，避免"悬停已展开时点按钮反而收起"） */
@@ -116,12 +120,24 @@ export function MissionExperience({ gameRef }: Props) {
   const selectMission = (missionId: string) => {
     gameRef.current?.activateMission(missionId);
     setSelectedId(missionId);
+    setDetailOpen(true);
   };
+
+  const useHint = (missionId: string) => {
+    gameRef.current?.useHint(missionId);
+    setHintTick((value) => value + 1);
+  };
+
+  const selectedDefinition = selectedId ? getMissionById(selectedId) : undefined;
+  const selectedSummary = selectedId ? missions.find((m) => m.id === selectedId) : undefined;
+  // 提示次数由 useHint() 触发 setHintTick 强制重渲染后重新读取
+  const hintsUsed = selectedId ? (gameRef.current?.getHintsUsed(selectedId) ?? 0) : 0;
+  const missingCapabilities = selectedId ? (gameRef.current?.getMissingCapabilities(selectedId) ?? []) : [];
 
   if (!ready) return null;
 
   return (
-    <div className="ca-root" data-testid="mission-experience">
+    <div className="ca-root" data-testid="mission-experience" data-hint-tick={hintTick}>
       <MissionSidebar
         missions={missions}
         selectedId={selectedId}
@@ -135,6 +151,23 @@ export function MissionExperience({ gameRef }: Props) {
         onToggleOpen={toggleOpen}
         onSelect={selectMission}
       />
+
+      {detailOpen && selectedDefinition && selectedSummary && (
+        <MissionDetailPanel
+          key={selectedDefinition.id}
+          definition={selectedDefinition}
+          summary={selectedSummary}
+          hintsUsed={hintsUsed}
+          missingCapabilities={missingCapabilities}
+          onUseHint={() => useHint(selectedDefinition.id)}
+          onClose={() => setDetailOpen(false)}
+          onFreeBuild={() => {
+            setDetailOpen(false);
+            closeNow();
+          }}
+        />
+      )}
+
       {notice && (
         <div className="ca-onboarding" role="status">
           <div className="ca-onboarding-card">
