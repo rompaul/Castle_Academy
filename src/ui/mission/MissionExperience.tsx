@@ -14,6 +14,8 @@ import { LEARNER_EVENTS, type LearnerProfileRecoveredPayload } from "../../plugi
 import { MissionSidebar } from "./MissionSidebar";
 import { MissionDetailPanel } from "./MissionDetailPanel";
 import { RewardReveal, type RewardView } from "./RewardReveal";
+import { OnboardingFlow, type OnboardingMode } from "./OnboardingFlow";
+import type { AgeBand } from "../../plugins/learner/types";
 
 interface Props {
   gameRef: MutableRefObject<GameActions | null>;
@@ -36,6 +38,8 @@ export function MissionExperience({ gameRef }: Props) {
   const [explicitOpen, setExplicitOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [reward, setReward] = useState<RewardView | null>(null);
+  const [profiles, setProfiles] = useState<LearnerProfile[]>([]);
+  const [onboardingMode, setOnboardingMode] = useState<OnboardingMode>("none");
   const closeTimer = useRef<number | null>(null);
 
   const open = pinned || hovered || explicitOpen;
@@ -75,15 +79,31 @@ export function MissionExperience({ gameRef }: Props) {
       const sync = () => {
         setMissions(game.getMissions());
         setProfile(game.getActiveProfile());
+        setProfiles(game.listProfiles());
       };
       sync();
+      // 首屏：无档案 → 创建引导；已有档案 → 档案选择页（可跳过直进自由建造）
+      setOnboardingMode(game.getActiveProfile() ? "profiles" : "nickname");
+      const onProfileReady = () => {
+        sync();
+        setOnboardingMode("none");
+        const first = game.getMissions()[0];
+        if (first) {
+          setSelectedId(first.id); // 首次进入高亮第一个任务
+          setHovered(true);        // 侧栏首次自动展开
+        }
+      };
       unsubs = [
         game.events.on<MissionOfferedPayload>(MISSION_EVENTS.offered, (e) => setMissions(e.payload.missions)),
         game.events.on(MISSION_EVENTS.progressUpdated, sync),
         game.events.on(MISSION_EVENTS.activated, sync),
-        game.events.on(LEARNER_EVENTS.created, sync),
-        game.events.on(LEARNER_EVENTS.switched, sync),
-        game.events.on<LearnerProfileRecoveredPayload>(LEARNER_EVENTS.recovered, (e) => setNotice(e.payload.message)),
+        game.events.on(LEARNER_EVENTS.created, onProfileReady),
+        game.events.on(LEARNER_EVENTS.switched, onProfileReady),
+        game.events.on<LearnerProfileRecoveredPayload>(LEARNER_EVENTS.recovered, (e) => {
+          setNotice(e.payload.message);
+          sync();
+          setOnboardingMode(game.getActiveProfile() ? "profiles" : "nickname");
+        }),
         game.events.on<MissionRewardGrantedPayload>(MISSION_EVENTS.rewardGranted, (e) => {
           const definition = getMissionById(e.payload.missionId);
           if (!definition) return;
@@ -156,6 +176,14 @@ export function MissionExperience({ gameRef }: Props) {
     }
   };
 
+  const createProfile = (nickname: string, ageBand: AgeBand) =>
+    gameRef.current?.createProfile(nickname, ageBand) ?? { ok: false, reason: "世界尚未就绪，请稍后再试" };
+
+  const switchProfile = (profileId: string) => {
+    gameRef.current?.switchProfile(profileId);
+    setOnboardingMode("none");
+  };
+
   const selectedDefinition = selectedId ? getMissionById(selectedId) : undefined;
   const selectedSummary = selectedId ? missions.find((m) => m.id === selectedId) : undefined;
   // 提示次数由 useHint() 触发 setHintTick 强制重渲染后重新读取
@@ -195,6 +223,18 @@ export function MissionExperience({ gameRef }: Props) {
           }}
         />
       )}
+
+      <OnboardingFlow
+        mode={onboardingMode}
+        profiles={profiles}
+        activeProfile={profile}
+        onCreate={createProfile}
+        onSwitch={switchProfile}
+        onSkip={() => setOnboardingMode("none")}
+        onStartCreate={() => setOnboardingMode("nickname")}
+        onGoAgeBand={() => setOnboardingMode("ageband")}
+        onEnterWorld={() => setOnboardingMode("none")}
+      />
 
       {reward && (
         <RewardReveal
