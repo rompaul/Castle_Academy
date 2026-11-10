@@ -148,7 +148,13 @@ export class ThreeWorldRenderer {
     this.reward = new RewardPlugin(this.events);
     this.missionRuntime = new MissionRuntimePlugin(this.waterPlugin, this.events, {
       reward: this.reward,
-      progressStore: new LearnerProfileProgressStore(this.learnerProfile, this.events)
+      progressStore: new LearnerProfileProgressStore(this.learnerProfile, this.events),
+      // V51-015/016：只读世界方块快照 + 剖面状态，供确定性计数/结构类评估器使用。
+      world: {
+        blockAt: (position) => this.world.get(position)?.blockId,
+        all: () => this.world.all()
+      },
+      sectionEnabled: () => this.layerPlugin.getSectionView().enabled
     });
     this.waterRenderAdapter = new WaterRenderAdapter(this.layerRenderAdapter, (y) =>
       this.layerPlugin.resolveLayerId(y) ?? this.layerPlugin.getDefaultLayerId() ?? "ground"
@@ -276,6 +282,10 @@ export class ThreeWorldRenderer {
           getHintsUsed: (missionId: string) => this.missionRuntime.getHintsUsed(missionId),
           getMissingCapabilities: (missionId: string) => this.missionRuntime.getMissingCapabilities(missionId),
           setCapabilityAvailable: (id: string, available: boolean) => this.missionRuntime.setCapabilityAvailable(id, available),
+          // —— V51-015/016 新增批次测试钩子（只追加）——
+          refreshMissions: () => this.missionRuntime.refresh(),
+          submitTextEvidence: (missionId: string, text: string) => this.missionRuntime.submitTextEvidence(missionId, text),
+          getTextEvidence: (missionId: string) => this.missionRuntime.getTextEvidence(missionId),
           placeWaterSource: (x: number, y: number, z: number) => this.addBlock({ x, y, z }, "water_source"),
           removeWaterSource: (x: number, y: number, z: number) => this.removeBlock({ x, y, z })
         }

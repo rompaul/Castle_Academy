@@ -19,7 +19,8 @@ import {
   type EvaluatorRegistry,
   type QuestCompletedPayload,
   type QuestState,
-  type QuestUpdatedPayload
+  type QuestUpdatedPayload,
+  type WorldReadQuery
 } from "./evaluators";
 import {
   MISSION_EVENTS,
@@ -36,6 +37,10 @@ export interface MissionRuntimeOptions {
   reward?: RewardPlugin;
   /** V51-007 默认内存实现；V51-008 注入学习者档案域适配器 */
   progressStore?: MissionProgressStore;
+  /** V51-015+ 世界方块只读快照（建造/计数/对称类评估器）；不触碰稳定契约 */
+  world?: WorldReadQuery;
+  /** V51-016 剖面视图查询（剖面侦探）；未注入时恒为 false */
+  sectionEnabled?: () => boolean;
 }
 
 interface MissionState {
@@ -80,6 +85,12 @@ export class MissionRuntimePlugin {
   private completionSuppressed = false;
   private active = false;
   private readonly unsubscribe: Array<() => void> = [];
+  /** V51-015+ 学习者文字证据：只在运行时内存，绝不写入档案 / 世界存档（ADR-0006 字段最小化） */
+  private readonly textEvidence = new Map<string, string>();
+  /** 结构性变化（放置方块 / 剖面切换 / 提交文字）需要一次收敛后的重算 */
+  private structuralDirty = false;
+  private readonly world?: WorldReadQuery;
+  private readonly sectionEnabled: () => boolean;
 
   constructor(
     private readonly water: WaterPlugin,
@@ -91,6 +102,8 @@ export class MissionRuntimePlugin {
     this.capabilities = options.capabilities ?? createV051Capabilities();
     this.reward = options.reward ?? new RewardPlugin(events);
     this.progressStore = options.progressStore ?? new InMemoryMissionProgressStore();
+    this.world = options.world;
+    this.sectionEnabled = options.sectionEnabled ?? (() => false);
   }
 
   activate(): void {
@@ -107,6 +120,17 @@ export class MissionRuntimePlugin {
           this.measurementUsed = true;
           this.evaluate();
         }
+      }),
+      // V51-015/016：结构性变化不改水域时 water.flow.updated 不会发射，
+      // 用「收敛后的下一 tick」补一次重算，保证建造/剖面/文字证据类任务即时反馈。
+      this.events.on("world.block.placed", () => { this.structuralDirty = true; }),
+      this.events.on("world.block.removed", () => { this.structuralDirty = true; }),
+      this.events.on("section.view.changed", () => { this.structuralDirty = true; }),
+      this.events.on("water.simulation.tick", () => {
+        if (!this.structuralDirty) return;
+        if (!this.water.getQuery().isConverged()) return;
+        this.structuralDirty = false;
+        this.evaluate();
       })
     );
     if (this.progressStore.onExternalChange) {
@@ -115,6 +139,8 @@ export class MissionRuntimePlugin {
         this.measurementUsed = false;
         this.allCompletedNotified = false;
         this.completionSuppressed = true;
+        this.textEvidence.clear(); // 别人的文字证据不得串到新档案
+        this.structuralDirty = false;
         this.reloadFromStore();
         this.emitOffered();
       }));
@@ -238,6 +264,24 @@ export class MissionRuntimePlugin {
     this.evaluate();
   }
 
+  /**
+   * V51-016 交流类任务证据：只做 trim + 非空存储，**不评判内容质量**（AC-232）。
+   * 最短长度由评估器判定；文本只留在运行时内存，不写 localStorage / WorldSnapshot。
+   */
+  submitTextEvidence(missionId: string, text: string): boolean {
+    if (!this.getDefinition(missionId)) return false;
+    const trimmed = text.trim();
+    if (trimmed.length === 0) return false;
+    this.textEvidence.set(missionId, trimmed);
+    this.structuralDirty = true;
+    this.evaluate();
+    return true;
+  }
+
+  getTextEvidence(missionId: string): string | null {
+    return this.textEvidence.get(missionId) ?? null;
+  }
+
   /* ---------------- 内部 ---------------- */
 
   private freshState(total: number, hintsUsed: number): MissionState {
@@ -275,7 +319,10 @@ export class MissionRuntimePlugin {
     return {
       water: this.water.getQuery(),
       everWet: this.everWet as ReadonlySet<string>,
-      measurementDone: this.measurementUsed
+      measurementDone: this.measurementUsed,
+      world: this.world,
+      textEvidence: this.textEvidence as ReadonlyMap<string, string>,
+      sectionEnabled: this.sectionEnabled()
     };
   }
 

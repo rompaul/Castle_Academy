@@ -57,8 +57,8 @@ describe("V51-007 MissionRuntimePlugin（状态机 + 双事件迁移期）", () 
     runtime.activate();
 
     expect(offered.length).toBeGreaterThan(0);
-    expect(offered[0].missions).toHaveLength(3);
-    expect(offered[0].missions.map((m) => m.id)).toEqual([
+    expect(offered[0].missions).toHaveLength(9);
+    expect(offered[0].missions.slice(0, 3).map((m) => m.id)).toEqual([
       "mission.moat.v1", "mission.well.v1", "mission.dungeon.v1"
     ]);
     expect(offered[0].missions.every((m) => m.status === "available")).toBe(true);
@@ -82,7 +82,7 @@ describe("V51-007 MissionRuntimePlugin（状态机 + 双事件迁移期）", () 
     const custom = new MissionRuntimePlugin(water, events, { capabilities, reward });
     custom.activate();
     const list = custom.getMissions();
-    expect(list).toHaveLength(3);
+    expect(list).toHaveLength(9);
     expect(list.every((m) => m.status === "unavailable")).toBe(true);
     expect(list[0].progressText).toBe("暂不可玩");
     expect(custom.activateMission("mission.moat.v1")).toBe(false);

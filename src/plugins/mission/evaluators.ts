@@ -11,6 +11,7 @@
 import type { GridPosition } from "../../core/world/coordinates";
 import type { WaterQuery } from "../water/WaterPlugin";
 import { MOAT_FLOOR_CELLS, WELL_SHAFT_CELLS, DUNGEON_DRY_CELLS } from "../learning/castleStage";
+import { registerExtendedEvaluators } from "./extendedEvaluators";
 
 /* ==================== 以下为 V0.5 原样迁移（勿改写） ==================== */
 
@@ -127,12 +128,24 @@ export function evaluateQuests(
 
 /* ==================== V0.51 评估器注册表 ==================== */
 
+/** V51-015+ 世界方块只读快照：不触碰 WorldState / WorldSnapshot 契约，只供确定性计数。 */
+export interface WorldReadQuery {
+  blockAt(position: GridPosition): string | undefined;
+  all(): ReadonlyArray<{ position: GridPosition; blockId: string }>;
+}
+
 export interface EvaluatorQuery {
   water: WaterQuery;
   /** 曾经积过水的 drain 任务 ID 集合（防伪完成） */
   everWet: ReadonlySet<string>;
   /** 玩家是否用过测量工具（水井门槛） */
   measurementDone: boolean;
+  /** 新增：世界方块只读快照（未注入时评估器降级为 0 进度，便于单测） */
+  world?: WorldReadQuery;
+  /** 新增：学习者提交的文字证据，仅运行时内存，不进档案 / 世界存档 */
+  textEvidence?: ReadonlyMap<string, string>;
+  /** 新增：剖面视图是否开启（剖面侦探） */
+  sectionEnabled?: boolean;
 }
 
 export interface EvaluatorResult {
@@ -203,6 +216,8 @@ export function createDefaultEvaluatorRegistry(): EvaluatorRegistry {
   for (const definition of QUEST_DEFINITIONS) {
     registry.register(createEvaluator(definition, EVALUATOR_ID_BY_QUEST[definition.id]));
   }
+  // V51-015/016 新增批次：判定仍为纯函数，与 V0.5 迁移判定彼此独立。
+  registerExtendedEvaluators(registry);
   return registry;
 }
 

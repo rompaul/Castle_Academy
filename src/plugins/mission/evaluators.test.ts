@@ -31,9 +31,19 @@ function harness(): { world: WorldState; water: WaterPlugin; query: () => Evalua
 }
 
 describe("V51-007 评估器注册表（AC-212 确定性）", () => {
-  it("注册 3 个首批评估器，ID 与 Content Pack 一致；重复注册报错", () => {
+  it("注册 3 个迁移评估器 + 6 个批次 1 评估器，ID 唯一；重复注册报错", () => {
     const registry = createDefaultEvaluatorRegistry();
-    expect(registry.ids().sort()).toEqual(["evaluator.dungeon", "evaluator.moat", "evaluator.well"]);
+    expect(registry.ids()).toHaveLength(9);
+    expect(registry.has("evaluator.moat")).toBe(true);
+    expect(registry.has("evaluator.well")).toBe(true);
+    expect(registry.has("evaluator.dungeon")).toBe(true);
+    expect(registry.has("evaluator.water-flow")).toBe(true);
+    expect(registry.has("evaluator.seven-steps")).toBe(true);
+    expect(registry.has("evaluator.channel-dam")).toBe(true);
+    expect(registry.has("evaluator.garden-water")).toBe(true);
+    expect(registry.has("evaluator.broken-pipe")).toBe(true);
+    expect(registry.has("evaluator.reservoir")).toBe(true);
+    expect(new Set(registry.ids()).size).toBe(9);
     expect(() => registry.register(registry.get("evaluator.moat")!)).toThrow(/Duplicate/);
     expect(registry.get("missing")).toBeUndefined();
   });
