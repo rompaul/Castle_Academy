@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-10T04:53:54.882Z",
+  "date": "2026-11-10T09:12:16.561Z",
   "viewportCanonical": "1280x800",
   "viewportWorldView": "1280x720",
   "screenshots": [
@@ -12,19 +12,20 @@
     "s8-mission-unavailable",
     "s7-mission-complete-reward",
     "world-main-v051(diffs)",
-    "world-clean-v051"
+    "world-clean-v051",
+    "world-canvas-anchor-v051"
   ],
   "worldViewRegression": {
     "comparable": true,
     "width": 1280,
     "height": 720,
     "totalPixels": 921600,
-    "differingPixels": 9480,
+    "differingPixels": 9482,
     "diffRatio": 1.029,
     "regionRatios": {
       "topbar": {
-        "diffPixels": 9416,
-        "ratioPercent": 9.679
+        "diffPixels": 9418,
+        "ratioPercent": 9.681
       },
       "footer": {
         "diffPixels": 0,
