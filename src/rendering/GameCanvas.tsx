@@ -44,6 +44,8 @@ export interface GameActions {
   useHint: (id: string) => number;
   getHintsUsed: (id: string) => number;
   getMissingCapabilities: (id: string) => string[];
+  /** V51-016 交流类任务文字证据（只留运行时内存，不进任何存档） */
+  submitTextEvidence: (missionId: string, text: string) => boolean;
 }
 
 interface Props {
@@ -124,7 +126,8 @@ export function GameCanvas({ selectedBlock, onPlayingChange, onMessage, onPersis
       activateMission: (id) => engine.missionRuntime.activateMission(id),
       useHint: (id) => engine.missionRuntime.useHint(id),
       getHintsUsed: (id) => engine.missionRuntime.getHintsUsed(id),
-      getMissingCapabilities: (id) => engine.missionRuntime.getMissingCapabilities(id)
+      getMissingCapabilities: (id) => engine.missionRuntime.getMissingCapabilities(id),
+      submitTextEvidence: (missionId, text) => engine.missionRuntime.submitTextEvidence(missionId, text)
     };
 
     // Persist layer/section view state whenever it changes (V0.4).

@@ -31,19 +31,19 @@ function harness(): { world: WorldState; water: WaterPlugin; query: () => Evalua
 }
 
 describe("V51-007 评估器注册表（AC-212 确定性）", () => {
-  it("注册 3 个迁移评估器 + 6 个批次 1 评估器，ID 唯一；重复注册报错", () => {
+  it("注册 3 个迁移评估器 + 12 个新增评估器，ID 唯一；重复注册报错", () => {
     const registry = createDefaultEvaluatorRegistry();
-    expect(registry.ids()).toHaveLength(9);
-    expect(registry.has("evaluator.moat")).toBe(true);
-    expect(registry.has("evaluator.well")).toBe(true);
-    expect(registry.has("evaluator.dungeon")).toBe(true);
-    expect(registry.has("evaluator.water-flow")).toBe(true);
-    expect(registry.has("evaluator.seven-steps")).toBe(true);
-    expect(registry.has("evaluator.channel-dam")).toBe(true);
-    expect(registry.has("evaluator.garden-water")).toBe(true);
-    expect(registry.has("evaluator.broken-pipe")).toBe(true);
-    expect(registry.has("evaluator.reservoir")).toBe(true);
-    expect(new Set(registry.ids()).size).toBe(9);
+    expect(registry.ids()).toHaveLength(15);
+    for (const id of [
+      "evaluator.moat", "evaluator.well", "evaluator.dungeon",
+      "evaluator.water-flow", "evaluator.seven-steps", "evaluator.channel-dam",
+      "evaluator.garden-water", "evaluator.broken-pipe", "evaluator.reservoir",
+      "evaluator.count-bridge", "evaluator.symmetric-gate", "evaluator.measure-tower",
+      "evaluator.section-detective", "evaluator.material-budget", "evaluator.my-design-note"
+    ]) {
+      expect(registry.has(id), id).toBe(true);
+    }
+    expect(new Set(registry.ids()).size).toBe(15);
     expect(() => registry.register(registry.get("evaluator.moat")!)).toThrow(/Duplicate/);
     expect(registry.get("missing")).toBeUndefined();
   });

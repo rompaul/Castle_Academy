@@ -286,6 +286,7 @@ export class ThreeWorldRenderer {
           refreshMissions: () => this.missionRuntime.refresh(),
           submitTextEvidence: (missionId: string, text: string) => this.missionRuntime.submitTextEvidence(missionId, text),
           getTextEvidence: (missionId: string) => this.missionRuntime.getTextEvidence(missionId),
+          emitMeasurementUsed: () => this.events.emit("measurement.used", { tool: "distance" }),
           placeWaterSource: (x: number, y: number, z: number) => this.addBlock({ x, y, z }, "water_source"),
           removeWaterSource: (x: number, y: number, z: number) => this.removeBlock({ x, y, z })
         }

@@ -125,7 +125,11 @@ export class MissionRuntimePlugin {
       // 用「收敛后的下一 tick」补一次重算，保证建造/剖面/文字证据类任务即时反馈。
       this.events.on("world.block.placed", () => { this.structuralDirty = true; }),
       this.events.on("world.block.removed", () => { this.structuralDirty = true; }),
-      this.events.on("section.view.changed", () => { this.structuralDirty = true; }),
+      // 剖面切换不改变水域，WaterPlugin 不会发射任何 tick；此处直接重算一次。
+      this.events.on("section.view.changed", () => {
+        this.structuralDirty = true;
+        this.evaluate();
+      }),
       this.events.on("water.simulation.tick", () => {
         if (!this.structuralDirty) return;
         if (!this.water.getQuery().isConverged()) return;

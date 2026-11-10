@@ -11,6 +11,8 @@ interface Props {
   onUseHint: () => void;
   onClose: () => void;
   onFreeBuild: () => void;
+  /** V51-016 交流类任务：提交文字证据。运行时只校验非空/最短长度，不评判内容 */
+  onSubmitEvidence?: (text: string) => boolean;
 }
 
 /**
@@ -20,17 +22,25 @@ interface Props {
  */
 export function MissionDetailPanel({
   definition, summary, hintsUsed, missingCapabilities,
-  onUseHint, onClose, onFreeBuild
+  onUseHint, onClose, onFreeBuild, onSubmitEvidence
 }: Props) {
   const [revealed, setRevealed] = useState(0);
+  const [note, setNote] = useState("");
+  const [noteSaved, setNoteSaved] = useState(false);
   const unavailable = summary.status === "unavailable";
   const completed = summary.status === "completed";
   const hints = definition.hintLadder;
+  const isCommunication = definition.expressionForms.includes("communication");
 
   const revealNext = () => {
     if (revealed >= hints.length) return;
     setRevealed((value) => value + 1);
     onUseHint();
+  };
+
+  const submitEvidence = () => {
+    if (!onSubmitEvidence) return;
+    setNoteSaved(onSubmitEvidence(note));
   };
 
   return (
@@ -99,6 +109,34 @@ export function MissionDetailPanel({
               <span className="ca-detail-label">换个思路 · 说说你的做法</span>
               <p className="ca-reflection">{definition.reflectionPrompt}</p>
             </div>
+
+            {isCommunication && (
+              <div className="ca-detail-section" data-testid="evidence-section">
+                <label className="ca-detail-label" htmlFor="ca-evidence-input">写下你的设计说明</label>
+                <textarea
+                  id="ca-evidence-input"
+                  className="ca-evidence-input"
+                  data-testid="evidence-input"
+                  rows={3}
+                  placeholder="我做了什么，为什么这样设计"
+                  value={note}
+                  onChange={(event) => { setNote(event.target.value); setNoteSaved(false); }}
+                />
+                <div className="ca-evidence-actions">
+                  <button
+                    className="ca-btn ca-btn-primary ca-btn-sm"
+                    type="button"
+                    data-testid="evidence-submit"
+                    onClick={submitEvidence}
+                  >
+                    记下我的想法
+                  </button>
+                  <span className="ca-evidence-status" data-testid="evidence-status">
+                    {noteSaved ? "已记下，内容不会被打分，也不会上传" : "至少写 12 个字；只检查长度，不评判内容"}
+                  </span>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

@@ -151,10 +151,109 @@ export const WATER_EXTENSION_EVALUATORS: readonly MissionEvaluator[] = [
   waterFlow, sevenSteps, channelDam, gardenWater, brokenPipe, reservoir
 ];
 
+/* ==================== V51-016 批次 2：跨年龄带（6 个） ==================== */
+
+const DESIGN_NOTE_MISSION_ID = "mission.my-design-note.v1";
+/** 交流类任务最短文字长度：只校验非空 / 最短长度，绝不评判内容质量（AC-232）。 */
+export const DESIGN_NOTE_MIN_LENGTH = 12;
+
+/** 计数建桥：用 6 块砖搭一段桥面（计数 + 创造）。 */
+const countBridge: MissionEvaluator = {
+  id: "evaluator.count-bridge",
+  legacyQuestId: "",
+  evaluate: (query) => result(countBlocks(query, "brick", (p) => p.y >= 1), 6),
+  describe: (query) => describe(countBlocks(query, "brick", (p) => p.y >= 1), 6)
+};
+
+/** 对称的城堡门：x 轴镜像的砖块成对出现，至少 3 对（形状 / 对称）。 */
+const symmetricGate: MissionEvaluator = {
+  id: "evaluator.symmetric-gate",
+  legacyQuestId: "",
+  evaluate: (query) => result(mirroredPairs(query), 3),
+  describe: (query) => describe(mirroredPairs(query), 3)
+};
+
+function mirroredPairs(query: EvaluatorQuery): number {
+  const positions = new Set(
+    blocks(query)
+      .filter((block) => block.blockId === "brick" && block.position.y >= 1)
+      .map((block) => `${block.position.x},${block.position.y},${block.position.z}`)
+  );
+  let pairs = 0;
+  for (const key of positions) {
+    const [x, y, z] = key.split(",").map(Number);
+    if (x > 0 && positions.has(`${-x},${y},${z}`)) pairs++;
+  }
+  return pairs;
+}
+
+/** 测量塔高：先量一次，再把同一列的塔搭到 5 层（测量门槛 + 空间）。 */
+const measureTower: MissionEvaluator = {
+  id: "evaluator.measure-tower",
+  legacyQuestId: "",
+  evaluate: (query) => query.measurementDone
+    ? result(tallestColumn(query), 5)
+    : { progress: 0, complete: false },
+  describe: (query) => describe(query.measurementDone ? tallestColumn(query) : 0, 5)
+};
+
+function tallestColumn(query: EvaluatorQuery): number {
+  const columns = new Map<string, Set<number>>();
+  for (const block of blocks(query)) {
+    if (block.blockId !== "brick" || block.position.y < 1 || block.position.y > 5) continue;
+    const key = `${block.position.x},${block.position.z}`;
+    if (!columns.has(key)) columns.set(key, new Set());
+    columns.get(key)!.add(block.position.y);
+  }
+  let tallest = 0;
+  for (const levels of columns.values()) tallest = Math.max(tallest, levels.size);
+  return tallest;
+}
+
+/** 剖面侦探：开剖面视图，在地下放 3 块标记砖（探索 + 空间）。 */
+const sectionDetective: MissionEvaluator = {
+  id: "evaluator.section-detective",
+  legacyQuestId: "",
+  evaluate: (query) => query.sectionEnabled
+    ? result(countBlocks(query, "brick", (p) => p.y <= -3), 3)
+    : { progress: 0, complete: false },
+  describe: (query) => describe(query.sectionEnabled ? countBlocks(query, "brick", (p) => p.y <= -3) : 0, 3)
+};
+
+/** 材料预算：8 块砖做主体 + 2 块放高处，合计 10 份材料（算术 + 规划）。 */
+const materialBudget: MissionEvaluator = {
+  id: "evaluator.material-budget",
+  legacyQuestId: "",
+  evaluate: (query) => {
+    const bricks = countBlocks(query, "brick");
+    const high = countBlocks(query, "brick", (p) => p.y >= 3);
+    const done = Math.min(bricks, 8) + Math.min(high, 2);
+    return result(done, 10);
+  },
+  describe: (query) => {
+    const bricks = countBlocks(query, "brick");
+    const high = countBlocks(query, "brick", (p) => p.y >= 3);
+    return describe(Math.min(bricks, 8) + Math.min(high, 2), 10);
+  }
+};
+
+/** 我的设计说明：文字证据只校验 trim 后长度 ≥12，不评判内容（AC-232）。 */
+const myDesignNote: MissionEvaluator = {
+  id: "evaluator.my-design-note",
+  legacyQuestId: "",
+  evaluate: (query) => result((query.textEvidence?.get(DESIGN_NOTE_MISSION_ID) ?? "").trim().length, DESIGN_NOTE_MIN_LENGTH),
+  describe: (query) => describe((query.textEvidence?.get(DESIGN_NOTE_MISSION_ID) ?? "").trim().length, DESIGN_NOTE_MIN_LENGTH)
+};
+
+export const CROSS_AGE_EVALUATORS: readonly MissionEvaluator[] = [
+  countBridge, symmetricGate, measureTower, sectionDetective, materialBudget, myDesignNote
+];
+
 /**
- * 注册本版全部新增评估器。V51-016 的跨年龄带评估器在此追加，
+ * 注册本版全部新增评估器：批次 1（水主题延伸）+ 批次 2（跨年龄带）。
  * 保持 `createDefaultEvaluatorRegistry()` 为产品唯一注册表入口。
  */
 export function registerExtendedEvaluators(registry: EvaluatorRegistry): void {
   for (const evaluator of WATER_EXTENSION_EVALUATORS) registry.register(evaluator);
+  for (const evaluator of CROSS_AGE_EVALUATORS) registry.register(evaluator);
 }

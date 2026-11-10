@@ -18,7 +18,7 @@ async function boot(page: import("@playwright/test").Page) {
   await expect.poll(() => page.evaluate(() => Boolean((window as any).__CASTLE_TEST__))).toBe(true);
 }
 
-test("Content Pack 9 个任务：迁移 3 个在前、批次 1 六个字段齐全且种子世界不伪完成", async ({ page }) => {
+test("Content Pack 15 个任务：迁移 3 个在前、批次 1 六个字段齐全且种子世界不伪完成", async ({ page }) => {
   await boot(page);
   const result = await page.evaluate(() => {
     const a = (window as any).__CASTLE_TEST__;
@@ -35,11 +35,11 @@ test("Content Pack 9 个任务：迁移 3 个在前、批次 1 六个字段齐�
       statuses: a.getMissions().map((m: { id: string; status: string }) => ({ id: m.id, status: m.status }))
     };
   });
-  expect(result.definitions).toHaveLength(9);
+  expect(result.definitions).toHaveLength(15);
   expect(result.definitions.slice(0, 3).map((m: { id: string }) => m.id)).toEqual([
     "mission.moat.v1", "mission.well.v1", "mission.dungeon.v1"
   ]);
-  const added = result.definitions.slice(3);
+  const added = result.definitions.slice(3, 9);
   expect(added.map((m: { id: string }) => m.id)).toEqual(NEW_IDS);
   for (const mission of added) {
     expect(mission.title.length).toBeGreaterThan(2);

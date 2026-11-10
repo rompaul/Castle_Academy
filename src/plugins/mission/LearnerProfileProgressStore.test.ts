@@ -144,7 +144,7 @@ describe("V51-008 任务进度持久化接入档案域（AC-201/202/211）", () 
     const store = memoryStore();
     const h = harness(store);
     expect(h.profile.getActiveProfile()).toBeNull();
-    expect(h.runtime.getMissions()).toHaveLength(9);
+    expect(h.runtime.getMissions()).toHaveLength(15);
     fillMoat(h.world);
     expect(() => h.settle()).not.toThrow();
     expect(h.runtime.getMission("mission.moat.v1")?.progress).toBe(1);
@@ -157,7 +157,7 @@ describe("V51-008 任务进度持久化接入档案域（AC-201/202/211）", () 
     store.data[LEARNER_STORAGE_KEY] = "{broken";
     const h = harness(store);
     expect(h.profile.consumeNotice()).toContain("已重置");
-    expect(h.runtime.getMissions()).toHaveLength(9);
+    expect(h.runtime.getMissions()).toHaveLength(15);
     expect(() => h.profile.createProfile("重新来过", "6-7")).not.toThrow();
     h.dispose();
   });

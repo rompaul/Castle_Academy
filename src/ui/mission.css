@@ -203,6 +203,17 @@
 .ca-reward-actions { display: flex; justify-content: center; gap: var(--ca-space-2); }
 .ca-reward-actions .ca-btn { min-width: 128px; }
 
+/* V51-016 交流类任务文字证据：只用 token，不新增调色板之外的色值 */
+.ca-evidence-input {
+  display: block; width: 100%; box-sizing: border-box; resize: vertical;
+  padding: var(--ca-space-2) var(--ca-space-3); border: 1.5px solid var(--ca-border-soft);
+  border-radius: var(--ca-radius-sm); background: var(--ca-surface-white); color: var(--ca-navy-900);
+  font-family: var(--ca-font-body); font-size: var(--ca-text-md); line-height: 1.6;
+}
+.ca-evidence-input:focus-visible { outline: 3px solid var(--ca-gold-500); outline-offset: 1px; }
+.ca-evidence-actions { display: flex; align-items: center; gap: var(--ca-space-2); margin-top: var(--ca-space-2); flex-wrap: wrap; }
+.ca-evidence-status { color: var(--ca-slate-600); font-size: var(--ca-text-sm); line-height: 1.5; }
+
 @media (max-width: 1024px) {
   .ca-sidebar-toggle { display: inline-flex; }
   .ca-detail { top: auto; bottom: 96px; right: var(--ca-space-3); }

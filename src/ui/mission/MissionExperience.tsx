@@ -37,7 +37,9 @@ export function MissionExperience({ gameRef }: Props) {
   /** 显式点击展开（与悬停展开分开，避免"悬停已展开时点按钮反而收起"） */
   const [explicitOpen, setExplicitOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [reward, setReward] = useState<RewardView | null>(null);
+  /** V51-016：多个任务可能在同一轮判定中同时完成，用队列逐张展示，避免后一个奖励覆盖前一个 */
+  const [rewardQueue, setRewardQueue] = useState<RewardView[]>([]);
+  const reward = rewardQueue[0] ?? null;
   const [profiles, setProfiles] = useState<LearnerProfile[]>([]);
   const [onboardingMode, setOnboardingMode] = useState<OnboardingMode>("none");
   const closeTimer = useRef<number | null>(null);
@@ -108,13 +110,13 @@ export function MissionExperience({ gameRef }: Props) {
           const definition = getMissionById(e.payload.missionId);
           if (!definition) return;
           setOnboardingMode("none"); // 完成反馈期间收起引导，避免与奖励卡片层叠
-          setReward({
+          setRewardQueue((queue) => [...queue, {
             missionId: definition.id,
             title: definition.title,
             successMessage: definition.successMessage,
             learned: definition.learningGoal,
             rewardTitle: e.payload.reward.title
-          });
+          }]);
         })
       ];
       setReady(true);
@@ -169,7 +171,7 @@ export function MissionExperience({ gameRef }: Props) {
 
   const nextMission = () => {
     const next = missions.find((m) => m.id !== reward?.missionId && m.status !== "completed" && m.status !== "unavailable");
-    setReward(null);
+    setRewardQueue((queue) => queue.slice(1));
     if (next) {
       selectMission(next.id);
       openNow();
@@ -223,6 +225,9 @@ export function MissionExperience({ gameRef }: Props) {
             setDetailOpen(false);
             closeNow();
           }}
+          onSubmitEvidence={(text) =>
+            gameRef.current?.submitTextEvidence(selectedDefinition.id, text) ?? false
+          }
         />
       )}
 
@@ -243,7 +248,7 @@ export function MissionExperience({ gameRef }: Props) {
           view={reward}
           onNextMission={nextMission}
           onFreeBuild={() => {
-            setReward(null);
+            setRewardQueue((queue) => queue.slice(1));
             setDetailOpen(false);
             closeNow();
           }}
