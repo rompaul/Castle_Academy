@@ -12,10 +12,14 @@ import { LayerRegistry } from "../plugins/layers/LayerRegistry";
 import { LayerRenderAdapter } from "./LayerRenderAdapter";
 import { WaterPlugin, type WaterFlowUpdatedPayload } from "../plugins/water/WaterPlugin";
 import { WaterRenderAdapter } from "./WaterRenderAdapter";
-import { CastleQuestPlugin } from "../plugins/learning/CastleQuestPlugin";
+import { LearnerProfilePlugin } from "../plugins/learner/LearnerProfilePlugin";
+import { MissionRuntimePlugin } from "../plugins/mission/MissionRuntimePlugin";
+import { RewardPlugin } from "../plugins/mission/RewardPlugin";
+import { LearnerProfileProgressStore } from "../plugins/mission/LearnerProfileProgressStore";
 import { buildCastleWaterStage } from "../plugins/learning/castleStage";
 import { buildBlockAtlas, createBlockGeometry, type BlockAtlas } from "./textureGenerator";
 import type { LayerKind, SectionViewState } from "../plugins/layers/LayerTypes";
+import type { AgeBand } from "../plugins/learner/types";
 import { EventBus } from "../core/events/EventBus";
 
 const BLOCK_SIZE = 1;
@@ -33,7 +37,10 @@ export class ThreeWorldRenderer {
   readonly layerPlugin: LayerPlugin;
   readonly layerRenderAdapter: LayerRenderAdapter;
   readonly waterPlugin: WaterPlugin;
-  readonly questPlugin: CastleQuestPlugin;
+  /** V0.51：档案域 / 任务运行时 / 幂等奖励（CastleQuestPlugin 退役，保留类供 V0.5 单测） */
+  readonly learnerProfile: LearnerProfilePlugin;
+  readonly reward: RewardPlugin;
+  readonly missionRuntime: MissionRuntimePlugin;
   private readonly waterRenderAdapter: WaterRenderAdapter;
   private readonly blockMeshes = new Map<string, THREE.Mesh>();
   private lineStart: GridPosition | null = null;
@@ -135,7 +142,14 @@ export class ThreeWorldRenderer {
 
     // V0.5 水模拟插件：WorldState 是唯一事实源，水格是 WaterPlugin 的派生状态
     this.waterPlugin = new WaterPlugin(this.world, this.events);
-    this.questPlugin = new CastleQuestPlugin(this.waterPlugin, this.events);
+    // V0.51：档案先激活（读取进度），任务运行时通过适配器绑定档案域；旧 quest.* 事件由运行时单点转发
+    this.learnerProfile = new LearnerProfilePlugin(this.events);
+    this.learnerProfile.activate();
+    this.reward = new RewardPlugin(this.events);
+    this.missionRuntime = new MissionRuntimePlugin(this.waterPlugin, this.events, {
+      reward: this.reward,
+      progressStore: new LearnerProfileProgressStore(this.learnerProfile, this.events)
+    });
     this.waterRenderAdapter = new WaterRenderAdapter(this.layerRenderAdapter, (y) =>
       this.layerPlugin.resolveLayerId(y) ?? this.layerPlugin.getDefaultLayerId() ?? "ground"
     );
@@ -219,7 +233,7 @@ export class ThreeWorldRenderer {
     this.renderer.domElement.addEventListener("pointermove", this.onPointerMove);
     this.seedWorld();
     this.waterPlugin.activate();
-    this.questPlugin.activate();
+    this.missionRuntime.activate();
     if (import.meta.env.DEV) {
       Object.assign(window, {
         __CASTLE_TEST__: {
@@ -247,7 +261,21 @@ export class ThreeWorldRenderer {
             isConverged: this.waterPlugin.getQuery().isConverged(),
             hasWater: (x: number, y: number, z: number) => this.waterPlugin.getQuery().hasWater({ x, y, z }),
           }),
-          getQuests: () => this.questPlugin.getQuests(),
+          getQuests: () => this.missionRuntime.getQuests(),
+          // —— V0.51 测试钩子（契约 §关键实现提示；只追加，不覆盖 V0.5 既有项）——
+          getMissions: () => this.missionRuntime.getMissions(),
+          getMissionDefinitions: () => this.missionRuntime.getDefinitions(),
+          getActiveProfile: () => this.learnerProfile.getActiveProfile(),
+          listProfiles: () => this.learnerProfile.listProfiles(),
+          switchProfile: (id: string) => this.learnerProfile.switchProfile(id),
+          setProfile: (nickname: string, ageBand: AgeBand) => this.learnerProfile.createProfile(nickname, ageBand),
+          getLearnerSnapshot: () => this.learnerProfile.snapshot(),
+          consumeLearnerNotice: () => this.learnerProfile.consumeNotice(),
+          activateMission: (missionId: string) => this.missionRuntime.activateMission(missionId),
+          useHint: (missionId: string) => this.missionRuntime.useHint(missionId),
+          getHintsUsed: (missionId: string) => this.missionRuntime.getHintsUsed(missionId),
+          getMissingCapabilities: (missionId: string) => this.missionRuntime.getMissingCapabilities(missionId),
+          setCapabilityAvailable: (id: string, available: boolean) => this.missionRuntime.setCapabilityAvailable(id, available),
           placeWaterSource: (x: number, y: number, z: number) => this.addBlock({ x, y, z }, "water_source"),
           removeWaterSource: (x: number, y: number, z: number) => this.removeBlock({ x, y, z })
         }
@@ -361,7 +389,7 @@ export class ThreeWorldRenderer {
     this.layerRenderAdapter.applyAllLayerVisibility();
     this.applySectionView(this.layerPlugin.getSectionView());
     this.waterPlugin.refresh(); // 存档加载/蓝图放置后重算水域（水格是派生状态）
-    this.questPlugin.resetEvaluation(); // 新世界重新开始任务判定
+    this.missionRuntime.resetEvaluation(); // 新世界重新判定，但完成态从档案域恢复（D-4）
   }
 
   /** 根据当前剖面状态设置单个 mesh 的显隐。 */
@@ -610,7 +638,7 @@ export class ThreeWorldRenderer {
     this.outline.visible = false;
     this.seedWorld();
     this.waterPlugin.activate();
-    this.questPlugin.activate();
+    this.missionRuntime.resetEvaluation();
     this.waterPlugin.refresh();
     this.player.reset();
     this.onMessage("World reset.");
@@ -625,7 +653,8 @@ export class ThreeWorldRenderer {
     this.renderer.domElement.removeEventListener("pointermove", this.onPointerMove);
     this.player.dispose();
     this.waterPlugin.dispose();
-    this.questPlugin.dispose();
+    this.missionRuntime.dispose();
+    this.learnerProfile.dispose();
     this.waterRenderAdapter.dispose();
     this.unsubscribeLayerEvents.forEach((unsub) => unsub());
     if (import.meta.env.DEV) delete (window as Window & { __CASTLE_TEST__?: unknown }).__CASTLE_TEST__;

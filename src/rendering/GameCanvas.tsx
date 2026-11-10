@@ -11,6 +11,10 @@ import type { MeasurementPlugin } from "../plugins/measurement/MeasurementPlugin
 import type { LayerPlugin } from "../plugins/layers/LayerPlugin";
 import type { ViewMode, SectionViewState } from "../plugins/layers/LayerTypes";
 import type { QuestState } from "../plugins/learning/castleQuests";
+import type { MissionDefinition, MissionSummary } from "../content/missions/types";
+import type { AgeBand, LearnerProfile } from "../plugins/learner/types";
+import type { MissionRuntimePlugin } from "../plugins/mission/MissionRuntimePlugin";
+import type { LearnerProfilePlugin } from "../plugins/learner/LearnerProfilePlugin";
 
 export interface GameActions {
   reset: () => void;
@@ -24,6 +28,22 @@ export interface GameActions {
   layerPlugin: LayerPlugin;
   reloadFromWorld: () => void;
   getQuests: () => QuestState[];
+  /** —— V0.51 任务体验接入点 —— */
+  missionRuntime: MissionRuntimePlugin;
+  learnerProfile: LearnerProfilePlugin;
+  getMissions: () => MissionSummary[];
+  getMissionDefinitions: () => readonly MissionDefinition[];
+  getActiveProfile: () => LearnerProfile | null;
+  listProfiles: () => LearnerProfile[];
+  switchProfile: (id: string) => boolean;
+  createProfile: (
+    nickname: string,
+    ageBand: AgeBand
+  ) => { ok: true; profile: LearnerProfile } | { ok: false; reason: string };
+  activateMission: (id: string) => boolean;
+  useHint: (id: string) => number;
+  getHintsUsed: (id: string) => number;
+  getMissingCapabilities: (id: string) => string[];
 }
 
 interface Props {
@@ -92,7 +112,19 @@ export function GameCanvas({ selectedBlock, onPlayingChange, onMessage, onPersis
       measurement: engine.measurement,
       layerPlugin: engine.layerPlugin,
       reloadFromWorld: () => engine.reloadFromWorld(),
-      getQuests: () => engine.questPlugin.getQuests()
+      getQuests: () => engine.missionRuntime.getQuests(),
+      missionRuntime: engine.missionRuntime,
+      learnerProfile: engine.learnerProfile,
+      getMissions: () => engine.missionRuntime.getMissions(),
+      getMissionDefinitions: () => engine.missionRuntime.getDefinitions(),
+      getActiveProfile: () => engine.learnerProfile.getActiveProfile(),
+      listProfiles: () => engine.learnerProfile.listProfiles(),
+      switchProfile: (id) => engine.learnerProfile.switchProfile(id),
+      createProfile: (nickname, ageBand) => engine.learnerProfile.createProfile(nickname, ageBand),
+      activateMission: (id) => engine.missionRuntime.activateMission(id),
+      useHint: (id) => engine.missionRuntime.useHint(id),
+      getHintsUsed: (id) => engine.missionRuntime.getHintsUsed(id),
+      getMissingCapabilities: (id) => engine.missionRuntime.getMissingCapabilities(id)
     };
 
     // Persist layer/section view state whenever it changes (V0.4).

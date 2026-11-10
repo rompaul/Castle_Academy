@@ -73,6 +73,11 @@ export class MissionRuntimePlugin {
   /** 水井测量门槛（V0.5 F-2 缺陷修复，AC-216） */
   private measurementUsed = false;
   private allCompletedNotified = false;
+  /**
+   * 档案切换后抑制"继承别人的世界状态"直接完成任务（AC-202 互不串扰）：
+   * 新档案必须等一次真实的世界变化（water.flow.updated / measurement.used）才允许判定完成。
+   */
+  private completionSuppressed = false;
   private active = false;
   private readonly unsubscribe: Array<() => void> = [];
 
@@ -92,8 +97,12 @@ export class MissionRuntimePlugin {
     if (this.active) return;
     this.active = true;
     this.unsubscribe.push(
-      this.events.on("water.flow.updated", () => this.evaluate()),
+      this.events.on("water.flow.updated", () => {
+        this.completionSuppressed = false;
+        this.evaluate();
+      }),
       this.events.on("measurement.used", () => {
+        this.completionSuppressed = false;
         if (!this.measurementUsed) {
           this.measurementUsed = true;
           this.evaluate();
@@ -102,8 +111,12 @@ export class MissionRuntimePlugin {
     );
     if (this.progressStore.onExternalChange) {
       this.unsubscribe.push(this.progressStore.onExternalChange(() => {
+        this.everWet.clear();
+        this.measurementUsed = false;
+        this.allCompletedNotified = false;
+        this.completionSuppressed = true;
         this.reloadFromStore();
-        this.evaluate();
+        this.emitOffered();
       }));
     }
     this.reloadFromStore();
@@ -214,6 +227,7 @@ export class MissionRuntimePlugin {
     this.everWet.clear();
     this.measurementUsed = false;
     this.allCompletedNotified = false;
+    this.completionSuppressed = false;
     this.reloadFromStore();
     this.evaluate();
   }
@@ -302,7 +316,7 @@ export class MissionRuntimePlugin {
         complete: state.status === "completed"
       });
 
-      if (state.complete && !unavailable && !this.completedNotified.has(mission.id)) {
+      if (state.complete && !this.completionSuppressed && !unavailable && !this.completedNotified.has(mission.id)) {
         this.completedNotified.add(mission.id);
         state.status = "completed";
         this.states.set(mission.id, state);

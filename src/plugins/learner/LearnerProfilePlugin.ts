@@ -188,13 +188,8 @@ export class LearnerProfilePlugin {
 
   private recover(reason: LearnerProfileRecoveredPayload["reason"], message: string): void {
     this.notice = message;
-    if (this.store) {
-      try {
-        this.store.setItem(this.storageKey, JSON.stringify(this.state));
-      } catch {
-        /* 存储不可用时仅保留内存状态，不再递归提示 */
-      }
-    }
+    // 不立即回写：React StrictMode 会二次挂载插件，若第一次就把损坏数据覆盖成合法空档案，
+    // 第二次挂载将看不到提示，用户也就不知道发生了重置。下一次真实写入（创建档案）时才覆盖。
     this.events.emit<LearnerProfileRecoveredPayload>(LEARNER_EVENTS.recovered, { reason, message });
   }
 

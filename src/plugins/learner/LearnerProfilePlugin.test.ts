@@ -104,9 +104,9 @@ describe("V51-005 LearnerProfilePlugin（ADR-0006）", () => {
     expect(plugin.consumeNotice()).toBeNull();
     expect(recovered).toHaveLength(1);
     expect(recovered[0].reason).toBe("corrupt");
-    expect(JSON.parse(store.data[LEARNER_STORAGE_KEY]).profiles).toEqual([]);
-    // 重置后仍可正常创建
+    // 重置后仍可正常创建，且此时才把损坏数据覆盖为合法档案
     expect(plugin.createProfile("新铭牌", "13-15").ok).toBe(true);
+    expect(JSON.parse(store.data[LEARNER_STORAGE_KEY]).profiles).toHaveLength(1);
   });
 
   it("结构非法 / 未知版本同样容错重置", () => {
