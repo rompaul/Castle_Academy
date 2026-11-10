@@ -33,7 +33,7 @@ test("奖励揭示动画 ≤400ms；完成幂等，不重复弹窗（AC-214/224�
   );
   expect(parseFloat(duration)).toBeLessThanOrEqual(0.4);
 
-  await page.getByRole("button", { name: /自由建造/ }).click();
+  await page.getByTestId("reward-reveal").getByRole("button", { name: "自由建造" }).click();
   await expect(page.getByTestId("reward-reveal")).toHaveCount(0);
   // 再次扰动水域：已完成任务不得重复发奖
   await page.evaluate(() => (window as any).__CASTLE_TEST__.placeWaterSource(5, 2, 0));

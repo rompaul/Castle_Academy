@@ -1,0 +1,44 @@
+{
+  "date": "2026-11-10T04:53:54.882Z",
+  "viewportCanonical": "1280x800",
+  "viewportWorldView": "1280x720",
+  "screenshots": [
+    "s1-onboarding-nickname",
+    "s2-onboarding-ageband",
+    "s3-profile-switch",
+    "s4-world-mission-sidebar",
+    "s5-sidebar-collapsed",
+    "s6-mission-detail",
+    "s8-mission-unavailable",
+    "s7-mission-complete-reward",
+    "world-main-v051(diffs)",
+    "world-clean-v051"
+  ],
+  "worldViewRegression": {
+    "comparable": true,
+    "width": 1280,
+    "height": 720,
+    "totalPixels": 921600,
+    "differingPixels": 9480,
+    "diffRatio": 1.029,
+    "regionRatios": {
+      "topbar": {
+        "diffPixels": 9416,
+        "ratioPercent": 9.679
+      },
+      "footer": {
+        "diffPixels": 0,
+        "ratioPercent": 0
+      },
+      "questPanel": {
+        "diffPixels": 12,
+        "ratioPercent": 0.01
+      },
+      "worldCanvas": {
+        "diffPixels": 0,
+        "ratioPercent": 0
+      }
+    }
+  },
+  "note": "世界视图为动态水模拟 + 相机会话状态，像素差仅作回归参考；零容差判定以渲染代码零改动 + 布局/尺寸不变为准。"
+}

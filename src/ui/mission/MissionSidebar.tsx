@@ -59,6 +59,7 @@ export function MissionSidebar({
         <Icon name="mission" size={14} /> 任务 {completed > 0 ? `(${completed}/${missions.length})` : ""}
       </button>
 
+      {open && (
       <div className="ca-sidebar-panel" role="region" aria-label="任务列表">
         <div className="ca-sidebar-header">
           <span className="ca-sidebar-title"><Icon name="mission" size={16} /> 任务 · 城堡水务</span>
@@ -120,6 +121,7 @@ export function MissionSidebar({
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 }

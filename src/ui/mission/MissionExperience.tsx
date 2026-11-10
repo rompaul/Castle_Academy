@@ -107,6 +107,7 @@ export function MissionExperience({ gameRef }: Props) {
         game.events.on<MissionRewardGrantedPayload>(MISSION_EVENTS.rewardGranted, (e) => {
           const definition = getMissionById(e.payload.missionId);
           if (!definition) return;
+          setOnboardingMode("none"); // 完成反馈期间收起引导，避免与奖励卡片层叠
           setReward({
             missionId: definition.id,
             title: definition.title,
@@ -158,6 +159,7 @@ export function MissionExperience({ gameRef }: Props) {
     gameRef.current?.activateMission(missionId);
     setSelectedId(missionId);
     setDetailOpen(true);
+    setOnboardingMode("none"); // 开始玩任务后不再显示引导卡片
   };
 
   const useHint = (missionId: string) => {
