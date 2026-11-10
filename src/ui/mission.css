@@ -89,8 +89,9 @@
   background: var(--ca-cream-050); border: 1.5px solid var(--ca-navy-900);
   border-radius: var(--ca-radius-md); box-shadow: var(--ca-shadow-panel);
   transform: translateX(calc(-100% - 24px)); transition: transform .24s ease;
+  visibility: hidden; pointer-events: none;
 }
-.ca-sidebar[data-open="true"] .ca-sidebar-panel { transform: translateX(0); }
+.ca-sidebar[data-open="true"] .ca-sidebar-panel { transform: translateX(0); visibility: visible; pointer-events: auto; }
 .ca-sidebar-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: var(--ca-space-3) var(--ca-space-4); background: var(--ca-teal-600);

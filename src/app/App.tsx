@@ -7,11 +7,10 @@ import { Hotbar } from "../ui/Hotbar";
 import { HelpPanel } from "../ui/HelpPanel";
 import type { SectionViewState } from "../plugins/layers/LayerTypes";
 import {
-  ALL_QUESTS_COMPLETE_EVENT,
-  QUEST_COMPLETED_EVENT,
   QUEST_UPDATED_EVENT,
   type QuestState
 } from "../plugins/learning/castleQuests";
+import { MissionExperience } from "../ui/mission/MissionExperience";
 
 export function App() {
   const [selectedBlock, setSelectedBlock] = useState<BlockId>("grass");
@@ -105,8 +104,8 @@ export function App() {
     const events = game.events;
     const unsubs = [
       events.on<{ quests: QuestState[] }>(QUEST_UPDATED_EVENT, (e) => setQuests(e.payload.quests)),
-      events.on<{ successMessage: string }>(QUEST_COMPLETED_EVENT, (e) => showMessage(e.payload.successMessage)),
-      events.on(ALL_QUESTS_COMPLETE_EVENT, () => showMessage("👑 陛下赐你'城堡水务大师'称号！三项水务任务全部完成！")),
+      // V0.51：完成反馈统一由 RewardReveal 提供，移除迁移期重复的 quest.completed /
+      // castle.quests.allCompleted toast 订阅（旧 quest-panel 仍保留至 STOP GATE-2）
       events.on<{ text: string | null }>("world.hover.info", (e) => setHoverInfo(e.payload.text))
     ];
     return () => unsubs.forEach((unsub) => unsub());
@@ -410,6 +409,9 @@ export function App() {
           <div className="hud-tip">LEFT CLICK · PLACE <span>│</span> RIGHT CLICK · REMOVE</div>
         </div>
       </section>
+
+      {/* V0.51 任务体验层：fixed overlay，不改变 canvas 视口尺寸 */}
+      <MissionExperience gameRef={gameRef} />
 
       <footer className="footer">
         <span>CASTLE ACADEMY <b>V0.5</b></span>
