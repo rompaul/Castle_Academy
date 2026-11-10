@@ -10,6 +10,8 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const BASE_URL = process.env.BASE_URL || "http://127.0.0.1:5173";
+/** F-1 修复：只重截「纯净世界视图 / worldCanvas 锚点」，不动 owner 已确认的 S1~S8 canonical。 */
+const CLEAN_ONLY = process.argv.includes("--clean-only");
 const CANON = resolve(process.cwd(), "docs/v0.51/screenshots/canonical");
 const DIFFS = resolve(process.cwd(), "docs/v0.51/screenshots/diffs");
 mkdirSync(CANON, { recursive: true });
@@ -46,6 +48,7 @@ async function boot() {
 }
 
 /* ---------- S1 / S2：首次进入引导 ---------- */
+if (!CLEAN_ONLY) {
 await boot();
 await shot("s1-onboarding-nickname");
 await page.getByTestId("onboarding-nickname").fill("小小工程师");
@@ -105,6 +108,10 @@ await page.getByTestId("reward-reveal").waitFor({ state: "visible", timeout: 150
 await page.waitForTimeout(300);
 await shot("s7-mission-complete-reward");
 await page.getByTestId("reward-reveal").getByRole("button", { name: "自由建造" }).click();
+} else {
+  // F-1 只需要一个已收敛的世界视图，跳过任务 UI 交互，避免重截已确认的 S1~S8
+  await boot();
+}
 
 /* ---------- 世界主视图：与 V0.5 canonical 相同的 UI 集合（只隐藏本版新增 .ca-root） ---------- */
 await page.addStyleTag({ content: ".ca-root { display: none !important; }" });
@@ -120,13 +127,22 @@ await page.waitForTimeout(2500);
 const mainPath = resolve(DIFFS, "world-main-v051.png");
 await page.screenshot({ path: mainPath });
 shots.push("world-main-v051(diffs)");
-// 无 UI 叠加的纯净世界视图：作为 V0.6 视觉回归锚点
-await page.addStyleTag({ content: ".quest-panel, .hover-info, .world-label, .bottom-hud, .crosshair { display: none !important; }" });
+/* F-1：真正「无 UI 叠加」的世界视图。除任务面板/热栏外，也隐藏顶栏、footer、初始 toast，
+   否则名字与内容不符，且会把 D-1 顶栏字体噪声带进 V0.6 的像素锚点。 */
+await page.addStyleTag({
+  content: ".topbar, .footer, .toast, .quest-panel, .hover-info, .world-label, .bottom-hud, .crosshair { display: none !important; }"
+});
 await page.waitForTimeout(400);
-const cleanPath = resolve(CANON, "world-clean-v051.png");
-await page.screenshot({ path: cleanPath });
-shots.push("world-clean-v051");
+await shot("world-clean-v051");
 
+/* V0.6 视觉回归锚点：只取 worldCanvas 裁剪区（x>=320, 76<=y<684），
+   与 diffs/visual-regression.json 的零容差分区定义完全一致，彻底隔离 HUD 噪声。 */
+const anchorPath = resolve(CANON, "world-canvas-anchor-v051.png");
+await page.screenshot({ path: anchorPath, clip: { x: 320, y: 76, width: 960, height: 608 } });
+shots.push("world-canvas-anchor-v051");
+console.log("SHOT world-canvas-anchor-v051");
+
+if (!CLEAN_ONLY) {
 /* 用浏览器 canvas 做像素级对比（无需额外依赖）；容差 8/通道抵消抗锯齿 */
 const baselinePath = resolve(process.cwd(), "docs/v0.5/screenshots/quest_panel_stage.png");
 let regression;
@@ -223,5 +239,7 @@ const report = {
 };
 writeFileSync(resolve(DIFFS, "visual-regression.json"), JSON.stringify(report, null, 2));
 console.log("REGRESSION", JSON.stringify(regression));
+} // if (!CLEAN_ONLY)：clean-only 不改写已提交的回归报告
+
 console.log("DONE", shots.length, "screenshots");
 await browser.close();
