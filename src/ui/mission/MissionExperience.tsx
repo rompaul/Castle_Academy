@@ -5,10 +5,15 @@ import type { GameActions } from "../../rendering/GameCanvas";
 import type { MissionSummary } from "../../content/missions/types";
 import { getMissionById } from "../../content/missions";
 import type { LearnerProfile } from "../../plugins/learner/types";
-import { MISSION_EVENTS, type MissionOfferedPayload } from "../../plugins/mission/events";
+import {
+  MISSION_EVENTS,
+  type MissionOfferedPayload,
+  type MissionRewardGrantedPayload
+} from "../../plugins/mission/events";
 import { LEARNER_EVENTS, type LearnerProfileRecoveredPayload } from "../../plugins/learner/types";
 import { MissionSidebar } from "./MissionSidebar";
 import { MissionDetailPanel } from "./MissionDetailPanel";
+import { RewardReveal, type RewardView } from "./RewardReveal";
 
 interface Props {
   gameRef: MutableRefObject<GameActions | null>;
@@ -30,6 +35,7 @@ export function MissionExperience({ gameRef }: Props) {
   /** 显式点击展开（与悬停展开分开，避免"悬停已展开时点按钮反而收起"） */
   const [explicitOpen, setExplicitOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [reward, setReward] = useState<RewardView | null>(null);
   const closeTimer = useRef<number | null>(null);
 
   const open = pinned || hovered || explicitOpen;
@@ -77,7 +83,18 @@ export function MissionExperience({ gameRef }: Props) {
         game.events.on(MISSION_EVENTS.activated, sync),
         game.events.on(LEARNER_EVENTS.created, sync),
         game.events.on(LEARNER_EVENTS.switched, sync),
-        game.events.on<LearnerProfileRecoveredPayload>(LEARNER_EVENTS.recovered, (e) => setNotice(e.payload.message))
+        game.events.on<LearnerProfileRecoveredPayload>(LEARNER_EVENTS.recovered, (e) => setNotice(e.payload.message)),
+        game.events.on<MissionRewardGrantedPayload>(MISSION_EVENTS.rewardGranted, (e) => {
+          const definition = getMissionById(e.payload.missionId);
+          if (!definition) return;
+          setReward({
+            missionId: definition.id,
+            title: definition.title,
+            successMessage: definition.successMessage,
+            learned: definition.learningGoal,
+            rewardTitle: e.payload.reward.title
+          });
+        })
       ];
       setReady(true);
       return true;
@@ -128,6 +145,17 @@ export function MissionExperience({ gameRef }: Props) {
     setHintTick((value) => value + 1);
   };
 
+  const nextMission = () => {
+    const next = missions.find((m) => m.id !== reward?.missionId && m.status !== "completed" && m.status !== "unavailable");
+    setReward(null);
+    if (next) {
+      selectMission(next.id);
+      openNow();
+    } else {
+      closeNow();
+    }
+  };
+
   const selectedDefinition = selectedId ? getMissionById(selectedId) : undefined;
   const selectedSummary = selectedId ? missions.find((m) => m.id === selectedId) : undefined;
   // 提示次数由 useHint() 触发 setHintTick 强制重渲染后重新读取
@@ -162,6 +190,18 @@ export function MissionExperience({ gameRef }: Props) {
           onUseHint={() => useHint(selectedDefinition.id)}
           onClose={() => setDetailOpen(false)}
           onFreeBuild={() => {
+            setDetailOpen(false);
+            closeNow();
+          }}
+        />
+      )}
+
+      {reward && (
+        <RewardReveal
+          view={reward}
+          onNextMission={nextMission}
+          onFreeBuild={() => {
+            setReward(null);
             setDetailOpen(false);
             closeNow();
           }}
