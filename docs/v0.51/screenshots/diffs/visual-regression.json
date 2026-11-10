@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-10T09:12:16.561Z",
+  "date": "2026-11-10T11:36:23.138Z",
   "viewportCanonical": "1280x800",
   "viewportWorldView": "1280x720",
   "screenshots": [
@@ -20,16 +20,16 @@
     "width": 1280,
     "height": 720,
     "totalPixels": 921600,
-    "differingPixels": 9482,
-    "diffRatio": 1.029,
+    "differingPixels": 11305,
+    "diffRatio": 1.227,
     "regionRatios": {
       "topbar": {
-        "diffPixels": 9418,
-        "ratioPercent": 9.681
+        "diffPixels": 9928,
+        "ratioPercent": 10.206
       },
       "footer": {
-        "diffPixels": 0,
-        "ratioPercent": 0
+        "diffPixels": 1313,
+        "ratioPercent": 2.849
       },
       "questPanel": {
         "diffPixels": 12,
