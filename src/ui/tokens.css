@@ -1,0 +1,40 @@
+/* V51-009 — DDR-0001 设计系统 token（唯一颜色/间距真源；改值需新 DDR） */
+:root {
+  /* 颜色（V0.2 DESIGN_SYSTEM §2，锁定后不再调） */
+  --ca-navy-900: #1E2A3A;   /* 主文字/主要导航 */
+  --ca-navy-700: #2A3441;   /* 次级深色表面（世界底色过渡） */
+  --ca-teal-600: #0F766E;   /* 主操作/激活导航 */
+  --ca-teal-100: #E6FFFA;   /* 柔和激活背景 */
+  --ca-gold-500: #F59E0B;   /* 奖励/发现/正面高亮 */
+  --ca-coral-500: #F97316;  /* 谨慎/选中注意（非日常装饰） */
+  --ca-cream-050: #FAF6EF;  /* 主画布暖底 */
+  --ca-slate-600: #475569;  /* 次级文字 */
+  --ca-green-600: #16A34A;  /* 成功/完成 */
+  --ca-red-600: #DC2626;    /* 破坏/错误（仅此用途） */
+
+  /* 中性表面（参考图中的浅灰卡片，属于 token 派生，不新增调色板之外色值） */
+  --ca-surface-white: #FFFFFF;
+  --ca-surface-muted: #F1F5F9;
+  --ca-border-soft: #CBD5E1;
+  --ca-shadow-panel: 0 12px 36px rgba(30, 42, 58, .22);
+  --ca-backdrop: rgba(11, 18, 32, .55);
+
+  /* 间距（4px 刻度） */
+  --ca-space-1: 4px;  --ca-space-2: 8px;  --ca-space-3: 12px;
+  --ca-space-4: 16px; --ca-space-5: 24px; --ca-space-6: 32px;
+
+  /* 圆角 */
+  --ca-radius-sm: 6px; --ca-radius-md: 10px; --ca-radius-lg: 16px; --ca-radius-pill: 999px;
+
+  /* 字体（系统栈起步；正式字体授权确认后经小版本替换） */
+  --ca-font-heading: "Segoe UI", system-ui, sans-serif;
+  --ca-font-body: "Segoe UI", system-ui, sans-serif;
+  --ca-text-sm: 11px; --ca-text-md: 13px; --ca-text-lg: 16px; --ca-text-xl: 20px;
+
+  /* 存量 HUD 兼容桥：值等于 V0.5 既有色值，替换后 computed style 不变（旧 UI 零回归）。
+     完整暖色对齐列入 V0.6 独立 DDR（R-604），本版不改动 HUD 观感。 */
+  --ca-legacy-shell: #18221d;
+  --ca-legacy-bar: #1b2821;
+  --ca-legacy-cream: #f4f1e7;
+  --ca-legacy-gold: #d9b66c;
+}
