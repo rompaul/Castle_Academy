@@ -6,7 +6,7 @@ import type { ReactNode, SVGProps } from "react";
  */
 export type IconName =
   | "mission" | "water" | "check" | "lock" | "hint" | "close" | "pin"
-  | "chevron" | "star" | "user" | "arrow" | "build" | "plus" | "play";
+  | "chevron" | "star" | "user" | "arrow" | "build" | "plus" | "play" | "pause";
 
 const PATHS: Record<IconName, ReactNode> = {
   mission: <><rect x="4" y="3" width="16" height="18" rx="3" /><path d="M8 8h8M8 12h8M8 16h5" /></>,
@@ -22,7 +22,8 @@ const PATHS: Record<IconName, ReactNode> = {
   arrow: <><path d="M4 12h15" /><path d="M14 7l5 5-5 5" /></>,
   build: <><rect x="4" y="9" width="12" height="11" rx="2" /><path d="M16 12h3l2 3-3 3h-2" /><path d="M7 9V6h6v3" /></>,
   plus: <path d="M12 5v14M5 12h14" />,
-  play: <path d="M8 5l11 7-11 7V5z" />
+  play: <path d="M8 5l11 7-11 7V5z" />,
+  pause: <><circle cx="12" cy="12" r="9" /><path d="M10 9v6M14 9v6" /></>
 };
 
 interface IconProps extends SVGProps<SVGSVGElement> {

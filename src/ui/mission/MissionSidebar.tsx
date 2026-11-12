@@ -8,12 +8,14 @@ interface Props {
   profile: LearnerProfile | null;
   open: boolean;
   pinned: boolean;
+  evidenceOpen: boolean;
   onOpen: () => void;
   onScheduleClose: () => void;
   onCloseNow: () => void;
   onTogglePin: () => void;
   onToggleOpen: () => void;
   onSelect: (missionId: string) => void;
+  onToggleEvidence: () => void;
 }
 
 /**
@@ -22,8 +24,8 @@ interface Props {
  * 仅热区/面板/按钮 intercept（R-606）。折叠态保留 14px 左缘悬停条。
  */
 export function MissionSidebar({
-  missions, selectedId, profile, open, pinned,
-  onOpen, onScheduleClose, onCloseNow, onTogglePin, onToggleOpen, onSelect
+  missions, selectedId, profile, open, pinned, evidenceOpen,
+  onOpen, onScheduleClose, onCloseNow, onTogglePin, onToggleOpen, onSelect, onToggleEvidence
 }: Props) {
   const completed = missions.filter((m) => m.status === "completed").length;
 
@@ -100,7 +102,10 @@ export function MissionSidebar({
                 <span className="ca-mission-title">
                   <span className="ca-status-icon">
                     <Icon
-                      name={mission.status === "completed" ? "check" : mission.status === "unavailable" ? "lock" : "water"}
+                      name={mission.status === "completed" ? "check"
+                        : mission.status === "locked" ? "lock"
+                          : mission.status === "unavailable" ? "pause"
+                            : "water"}
                       size={15}
                     />
                   </span>
@@ -116,6 +121,17 @@ export function MissionSidebar({
         )}
 
         <div className="ca-sidebar-footer">
+          {profile && (
+            <button
+              className="ca-btn ca-btn-ghost ca-btn-sm"
+              type="button"
+              aria-pressed={evidenceOpen}
+              data-testid="evidence-toggle"
+              onClick={onToggleEvidence}
+            >
+              <Icon name="star" size={14} /> 我的证据
+            </button>
+          )}
           <button className="ca-btn ca-btn-outline ca-btn-sm" type="button" onClick={onCloseNow}>
             <Icon name="build" size={14} /> 继续自由建造
           </button>

@@ -219,3 +219,62 @@
   .ca-detail { top: auto; bottom: 96px; right: var(--ca-space-3); }
   .ca-onboarding { right: var(--ca-space-3); bottom: var(--ca-space-4); }
 }
+
+/* ---------- V06-017 知识点关联卡（K2） ---------- */
+.ca-kp-list { display: flex; flex-direction: column; gap: var(--ca-space-2); }
+.ca-kp-item {
+  display: flex; gap: var(--ca-space-2); align-items: flex-start; padding: var(--ca-space-3);
+  border-radius: var(--ca-radius-sm); background: var(--ca-cream-050);
+  border: 1px solid var(--ca-border-soft); font-size: var(--ca-text-md); line-height: 1.6;
+}
+.ca-kp-item .ca-status-icon { flex: 0 0 auto; color: var(--ca-teal-600); }
+.ca-kp-item b { color: var(--ca-navy-900); }
+.ca-kp-summary { color: var(--ca-slate-600); }
+.ca-kp-skeleton {
+  display: inline-block; min-width: 96px; height: 1em; border-radius: var(--ca-radius-sm);
+  background: var(--ca-surface-muted); animation: ca-kp-pulse 1.2s ease-in-out infinite;
+}
+@keyframes ca-kp-pulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+
+/* ---------- V06-018 锁定态（K3） ---------- */
+[data-testid="mission-locked"] {
+  padding: var(--ca-space-4); border: 1px dashed var(--ca-teal-600); border-radius: var(--ca-radius-md);
+  background: var(--ca-teal-100); color: var(--ca-navy-900); font-size: var(--ca-text-md); line-height: 1.7;
+}
+
+/* ---------- V06-019 证据记录面板（K5） ---------- */
+.ca-evidence-panel {
+  position: fixed; right: var(--ca-space-5); top: 96px; width: min(340px, calc(100vw - 32px));
+  max-height: calc(100vh - 150px); overflow-y: auto; z-index: 50; pointer-events: auto;
+  background: var(--ca-surface-white); border: 1.5px solid var(--ca-navy-900);
+  border-radius: var(--ca-radius-lg); box-shadow: var(--ca-shadow-panel);
+  animation: ca-notice-in .3s ease-out both;
+}
+.ca-evidence-list { display: flex; flex-direction: column; gap: var(--ca-space-2); }
+.ca-evidence-item {
+  display: flex; flex-direction: column; gap: 2px; padding: var(--ca-space-3);
+  border-radius: var(--ca-radius-sm); background: var(--ca-surface-muted);
+}
+.ca-evidence-kp { display: flex; align-items: center; gap: var(--ca-space-1); color: var(--ca-teal-600); font-weight: 600; font-size: var(--ca-text-md); }
+.ca-evidence-obs { color: var(--ca-slate-600); font-size: var(--ca-text-sm); line-height: 1.6; }
+
+/* ---------- V06-020 迁移/容错提示（K6，非模态轻卡片） ---------- */
+@keyframes ca-notice-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.ca-notice {
+  position: fixed; right: var(--ca-space-5); bottom: var(--ca-space-6);
+  width: min(320px, calc(100vw - 32px)); z-index: 60; pointer-events: none;
+}
+.ca-notice-card {
+  pointer-events: auto;
+  display: flex; flex-direction: column; gap: var(--ca-space-3);
+  background: var(--ca-surface-white); border: 1.5px solid var(--ca-navy-900);
+  border-left: 8px solid var(--ca-gold-500); border-radius: var(--ca-radius-lg);
+  padding: var(--ca-space-4); box-shadow: var(--ca-shadow-panel);
+  animation: ca-notice-in .3s ease-out both;
+}
+.ca-notice-text { color: var(--ca-slate-600); font-size: var(--ca-text-md); line-height: 1.7; }
+.ca-notice-card .ca-btn { align-self: flex-end; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ca-notice-card, .ca-evidence-panel, .ca-kp-skeleton { animation: none; }
+}

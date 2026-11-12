@@ -13,6 +13,7 @@ import {
 import { LEARNER_EVENTS, type LearnerProfileRecoveredPayload } from "../../plugins/learner/types";
 import { MissionSidebar } from "./MissionSidebar";
 import { MissionDetailPanel } from "./MissionDetailPanel";
+import { EvidenceRecordPanel } from "./EvidenceRecordPanel";
 import { RewardReveal, type RewardView } from "./RewardReveal";
 import { OnboardingFlow, type OnboardingMode } from "./OnboardingFlow";
 import type { AgeBand } from "../../plugins/learner/types";
@@ -42,6 +43,10 @@ export function MissionExperience({ gameRef }: Props) {
   const reward = rewardQueue[0] ?? null;
   const [profiles, setProfiles] = useState<LearnerProfile[]>([]);
   const [onboardingMode, setOnboardingMode] = useState<OnboardingMode>("none");
+  /** V06-019（K5）：证据记录面板开关；数据从档案实时读取 */
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
+  /** V06-020（K6）：迁移/容错提示已读（非模态卡片，不再阻挡交互） */
+  const [noticeDismissed, setNoticeDismissed] = useState(false);
   const closeTimer = useRef<number | null>(null);
 
   const open = pinned || hovered || explicitOpen;
@@ -84,6 +89,9 @@ export function MissionExperience({ gameRef }: Props) {
         setProfiles(game.listProfiles());
       };
       sync();
+      // V06-020（K6）：插件激活早于 UI 订阅，recovered 事件可能已错过——初始化时补读待展示提示
+      const pending = game.learnerProfile.peekNotice();
+      if (pending) setNotice(pending);
       // 首屏：无档案 → 创建引导；已有档案 → 档案选择页（可跳过直进自由建造）
       setOnboardingMode(game.getActiveProfile() ? "profiles" : "nickname");
       const onProfileReady = () => {
@@ -103,6 +111,7 @@ export function MissionExperience({ gameRef }: Props) {
         game.events.on(LEARNER_EVENTS.switched, onProfileReady),
         game.events.on<LearnerProfileRecoveredPayload>(LEARNER_EVENTS.recovered, (e) => {
           setNotice(e.payload.message);
+          setNoticeDismissed(false); // 新提示重新可读
           sync();
           setOnboardingMode(game.getActiveProfile() ? "profiles" : "nickname");
         }),
@@ -170,7 +179,8 @@ export function MissionExperience({ gameRef }: Props) {
   };
 
   const nextMission = () => {
-    const next = missions.find((m) => m.id !== reward?.missionId && m.status !== "completed" && m.status !== "unavailable");
+    const next = missions.find((m) => m.id !== reward?.missionId
+      && m.status !== "completed" && m.status !== "unavailable" && m.status !== "locked");
     setRewardQueue((queue) => queue.slice(1));
     if (next) {
       selectMission(next.id);
@@ -193,6 +203,12 @@ export function MissionExperience({ gameRef }: Props) {
   // 提示次数由 useHint() 触发 setHintTick 强制重渲染后重新读取
   const hintsUsed = selectedId ? (gameRef.current?.getHintsUsed(selectedId) ?? 0) : 0;
   const missingCapabilities = selectedId ? (gameRef.current?.getMissingCapabilities(selectedId) ?? []) : [];
+  // V06-019：证据记录（profile 变化时随 sync 更新）
+  const evidenceRecords = evidenceOpen && profile
+    ? gameRef.current?.learnerProfile.getMasteryEvidence() ?? []
+    : [];
+  const missionTitleById = (missionId: string) =>
+    missions.find((m) => m.id === missionId)?.title ?? missionId;
 
   if (!ready) return null;
 
@@ -204,12 +220,14 @@ export function MissionExperience({ gameRef }: Props) {
         profile={profile}
         open={open}
         pinned={pinned}
+        evidenceOpen={evidenceOpen}
         onOpen={openNow}
         onScheduleClose={scheduleClose}
         onCloseNow={closeNow}
         onTogglePin={togglePin}
         onToggleOpen={toggleOpen}
         onSelect={selectMission}
+        onToggleEvidence={() => setEvidenceOpen((value) => !value)}
       />
 
       {detailOpen && selectedDefinition && selectedSummary && (
@@ -255,15 +273,27 @@ export function MissionExperience({ gameRef }: Props) {
         />
       )}
 
-      {notice && (
-        <div className="ca-onboarding" role="status">
-          <div className="ca-onboarding-card">
-            <div className="ca-onboarding-sub">{notice}</div>
-            <div className="ca-onboarding-actions">
-              <button className="ca-btn ca-btn-primary ca-btn-sm" type="button" onClick={() => setNotice(null)}>
-                知道了
-              </button>
-            </div>
+      {evidenceOpen && (
+        <EvidenceRecordPanel
+          records={evidenceRecords}
+          missionTitleById={missionTitleById}
+          onClose={() => setEvidenceOpen(false)}
+        />
+      )}
+
+      {notice && !noticeDismissed && (
+        /* V06-020（K6）：非模态轻提示卡，不阻挡世界交互；≤400ms 轻动画 + 减少动效支持 */
+        <div className="ca-notice" role="status" data-testid="profile-notice">
+          <div className="ca-notice-card">
+            <div className="ca-notice-text">{notice}</div>
+            <button
+              className="ca-btn ca-btn-primary ca-btn-sm"
+              type="button"
+              data-testid="notice-dismiss"
+              onClick={() => setNoticeDismissed(true)}
+            >
+              知道了
+            </button>
           </div>
         </div>
       )}

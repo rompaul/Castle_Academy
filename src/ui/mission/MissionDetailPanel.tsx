@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { MissionDefinition, MissionSummary } from "../../content/missions/types";
+import { getKnowledgePointById } from "../../content/knowledge/registry";
 import { Icon } from "../icons";
 
 interface Props {
@@ -29,8 +30,13 @@ export function MissionDetailPanel({
   const [noteSaved, setNoteSaved] = useState(false);
   const unavailable = summary.status === "unavailable";
   const completed = summary.status === "completed";
+  const locked = summary.status === "locked";
   const hints = definition.hintLadder;
   const isCommunication = definition.expressionForms.includes("communication");
+  // V06-017（K2）：v2 任务才显示知识点关联卡；未注册 ID 显示骨架占位，不显示内部 ID
+  const knowledgePoints = definition.schemaVersion === 2
+    ? (definition.knowledgePointIds ?? []).map((id) => ({ id, kp: getKnowledgePointById(id) }))
+    : [];
 
   const revealNext = () => {
     if (revealed >= hints.length) return;
@@ -58,7 +64,18 @@ export function MissionDetailPanel({
           <p className="ca-detail-context">{definition.context}</p>
         </div>
 
-        {unavailable ? (
+        {locked ? (
+          <div className="ca-detail-section" data-testid="mission-locked">
+            <p style={{ margin: 0 }}>
+              先完成〈{summary.prerequisiteTitles[0] ?? "前置任务"}〉，再来玩这个任务。
+            </p>
+            {summary.prerequisiteTitles.length > 1 && (
+              <p style={{ margin: "var(--ca-space-2) 0 0" }}>
+                还要先完成：{summary.prerequisiteTitles.slice(1).map((t) => `〈${t}〉`).join("、")}
+              </p>
+            )}
+          </div>
+        ) : unavailable ? (
           <div className="ca-detail-section">
             <div className="ca-unavailable" data-testid="mission-unavailable">
               <p style={{ margin: 0 }}>这个任务暂时还不能玩：{definition.unavailableReason}</p>
@@ -105,6 +122,32 @@ export function MissionDetailPanel({
               </div>
             </div>
 
+            {knowledgePoints.length > 0 && (
+              <div className="ca-detail-section" data-testid="knowledge-points">
+                <span className="ca-detail-label">这个任务会用到</span>
+                <div className="ca-kp-list">
+                  {knowledgePoints.map(({ id, kp }) => (
+                    <div className="ca-kp-item" key={id} data-testid="knowledge-point-item">
+                      <span className="ca-status-icon">
+                        {kp ? <Icon name="star" size={14} /> : <Icon name="hint" size={14} />}
+                      </span>
+                      <span>
+                        {kp ? (
+                          <>
+                            <b>{kp.label}</b>
+                            <span className="ca-kp-summary"> · {kp.summary}</span>
+                          </>
+                        ) : (
+                          /* 注册表数据缺失：骨架占位，不显示内部 ID */
+                          <span className="ca-kp-skeleton" aria-label="知识点加载中">…</span>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="ca-detail-section">
               <span className="ca-detail-label">换个思路 · 说说你的做法</span>
               <p className="ca-reflection">{definition.reflectionPrompt}</p>
@@ -143,7 +186,7 @@ export function MissionDetailPanel({
 
       <div className="ca-detail-actions">
         <button className="ca-btn ca-btn-primary ca-btn-sm" type="button" onClick={onFreeBuild}>
-          <Icon name="build" size={14} /> {unavailable ? "先玩别的任务" : "继续自由建造"}
+          <Icon name="build" size={14} /> {unavailable || locked ? "先玩别的任务" : "继续自由建造"}
         </button>
         <button className="ca-btn ca-btn-ghost ca-btn-sm" type="button" onClick={onClose}>收起</button>
       </div>
