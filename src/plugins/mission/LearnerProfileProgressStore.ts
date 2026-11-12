@@ -1,6 +1,10 @@
 import type { EventBus } from "../../core/events/EventBus";
 import type { LearnerProfilePlugin } from "../learner/LearnerProfilePlugin";
-import { LEARNER_EVENTS, type MissionProgressEntry } from "../learner/types";
+import {
+  LEARNER_EVENTS,
+  type MasteryEvidenceRecord,
+  type MissionProgressEntry
+} from "../learner/types";
 import type { MissionProgressStore } from "./CapabilityRegistry";
 
 /**
@@ -22,6 +26,11 @@ export class LearnerProfileProgressStore implements MissionProgressStore {
 
   set(missionId: string, patch: Partial<MissionProgressEntry>): void {
     this.profile.updateMissionProgress(missionId, patch);
+  }
+
+  /** V0.6（ADR-0010 / V06-013）：完成时按知识点落掌握证据到当前档案。 */
+  recordMasteryEvidence(records: readonly MasteryEvidenceRecord[]): void {
+    this.profile.recordMasteryEvidence(records);
   }
 
   onExternalChange(handler: () => void): () => void {

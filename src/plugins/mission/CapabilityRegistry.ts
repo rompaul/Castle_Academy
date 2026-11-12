@@ -61,6 +61,8 @@ export interface MissionProgressStore {
   set(missionId: string, entry: Partial<MissionProgressEntry>): void;
   /** 档案切换等外部状态替换时通知运行时重载（返回取消订阅函数） */
   onExternalChange?(handler: () => void): () => void;
+  /** V0.6（ADR-0010 / V06-013）：完成时按知识点记录掌握证据；内存实现可不支持 */
+  recordMasteryEvidence?(records: readonly import("../learner/types").MasteryEvidenceRecord[]): void;
 }
 
 export class InMemoryMissionProgressStore implements MissionProgressStore {

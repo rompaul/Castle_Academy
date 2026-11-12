@@ -7,7 +7,9 @@ export const MISSION_EVENTS = {
   activated: "mission.activated",
   progressUpdated: "mission.progress.updated",
   completed: "mission.completed",
-  rewardGranted: "mission.reward.granted"
+  rewardGranted: "mission.reward.granted",
+  /** V0.6 新增（ADR-0009 / V06-012）：任务从 locked 转为可玩时发射一次；确定性、可重放 */
+  unlocked: "mission.unlocked"
 } as const;
 
 export interface MissionOfferedPayload {
@@ -33,4 +35,8 @@ export interface MissionCompletedPayload {
 export interface MissionRewardGrantedPayload {
   missionId: string;
   reward: MissionReward;
+}
+
+export interface MissionUnlockedPayload {
+  missionId: string;
 }

@@ -5,6 +5,7 @@
  * 判定一律通过 `evaluatorId` 指向 `src/plugins/mission/evaluators.ts` 的确定性评估器。
  */
 import { isAgeBand, type AgeBand } from "../../plugins/learner/types";
+import { isRegisteredKnowledgePoint } from "../knowledge/registry";
 
 /** V0.2 PRODUCT_DEFINITION §4 六种任务表达形式 */
 export type ExpressionForm =
@@ -45,8 +46,15 @@ export interface MissionDefinition {
   reward?: MissionReward;
   /** —— V0.2 LEARNING_MODEL §6 内容质量清单必填项 —— */
   learningGoal: string;
-  /** 仅数据占位，V0.6 任务链消费；V0.51 运行时不解析前置关系 */
+  /** 任务链前置；V0.6 起由 resolveMissionGraph() 真正解析（ADR-0009），仅数据占位 → 运行时消费 */
   prerequisiteMissionIds: string[];
+  /**
+   * Content Pack schema 版本（ADR-0009）：缺省 = v1（无知识点字段）；
+   * 2 = v2，必须带 knowledgePointIds 且每个 ID 已注册。
+   */
+  schemaVersion?: 1 | 2;
+  /** 引用的知识点 ID（v2 必填）；每个 ID 必须已在 src/content/knowledge/registry.ts 注册 */
+  knowledgePointIds?: string[];
   reflectionPrompt: string;
   accessibilityNote: string;
   /** 平实语言进度模板：{done}/{total} 由运行时替换，永不显示百分比分层 */
@@ -59,12 +67,15 @@ export interface MissionDefinition {
 export interface MissionSummary {
   id: string;
   title: string;
-  status: "available" | "active" | "completed" | "unavailable";
+  /** V0.6 起新增 locked（前置未完成）派生视图态；持久化三态（available/active/completed）不变 */
+  status: "available" | "active" | "completed" | "unavailable" | "locked";
   progress: number;
   progressText: string;
   ageScope: AgeBand;
   evaluatorId: string;
   successMessage: string;
+  /** V06-018（K3/K4）：未完成前置任务的标题（按定义顺序）；锁定详情页展示「先完成〈任务名〉」 */
+  prerequisiteTitles: string[];
 }
 
 const REQUIRED_STRING_FIELDS = [
@@ -106,6 +117,26 @@ export function validateMissionDefinition(value: unknown): { ok: true } | { ok: 
     errors.push("requiredCapabilities 必须是字符串数组");
   }
   if (!Array.isArray(def.prerequisiteMissionIds)) errors.push("prerequisiteMissionIds 必须是数组");
+
+  // —— schema v2 双模校验（ADR-0009）：v1 缺省行为不变，v2 强制知识点字段 ——
+  const schemaVersion = def.schemaVersion;
+  if (schemaVersion !== undefined && schemaVersion !== 1 && schemaVersion !== 2) {
+    errors.push("schemaVersion 只允许 1 / 2");
+  }
+  if (schemaVersion === 2) {
+    if (!Array.isArray(def.knowledgePointIds) || def.knowledgePointIds.length === 0) {
+      errors.push("schemaVersion 2 要求 knowledgePointIds 至少一个");
+    } else if (def.knowledgePointIds.some((id) => typeof id !== "string" || !isRegisteredKnowledgePoint(id))) {
+      errors.push("knowledgePointIds 中存在未注册的知识点 ID");
+    }
+  } else if (def.knowledgePointIds !== undefined) {
+    // v1 允许缺省；若显式携带也必须全部已注册，不允许静默忽略
+    if (!Array.isArray(def.knowledgePointIds)) {
+      errors.push("knowledgePointIds 必须是字符串数组");
+    } else if (def.knowledgePointIds.some((id) => typeof id !== "string" || !isRegisteredKnowledgePoint(id))) {
+      errors.push("knowledgePointIds 中存在未注册的知识点 ID");
+    }
+  }
   if (def.reward !== undefined) {
     const reward = def.reward as Record<string, unknown> | null;
     if (!reward || typeof reward !== "object" || reward.kind !== "title"

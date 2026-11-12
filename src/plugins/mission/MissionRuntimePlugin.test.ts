@@ -41,7 +41,14 @@ describe("V51-007 MissionRuntimePlugin（状态机 + 双事件迁移期）", () 
     water = new WaterPlugin(world, events);
     water.activate();
     reward = new RewardPlugin(events);
-    runtime = new MissionRuntimePlugin(water, events, { reward });
+    runtime = new MissionRuntimePlugin(water, events, {
+      reward,
+      // V06-011/012 测试需要扩展评估器读取世界方块（与 ThreeWorldRenderer 产品接线一致）
+      world: {
+        blockAt: (position) => world.get(position)?.blockId,
+        all: () => world.all()
+      }
+    });
   });
 
   afterEach(() => {
@@ -49,7 +56,7 @@ describe("V51-007 MissionRuntimePlugin（状态机 + 双事件迁移期）", () 
     water.dispose();
   });
 
-  it("激活时发射 mission.offered 与旧 quest.updated，三任务状态为 available", () => {
+  it("激活时发射 mission.offered 与旧 quest.updated；12 个 available + 3 个 locked（V06-011）", () => {
     const offered: MissionOfferedPayload[] = [];
     const quests: QuestUpdatedPayload[] = [];
     events.on<MissionOfferedPayload>(MISSION_EVENTS.offered, (e) => offered.push(e.payload));
@@ -61,9 +68,38 @@ describe("V51-007 MissionRuntimePlugin（状态机 + 双事件迁移期）", () 
     expect(offered[0].missions.slice(0, 3).map((m) => m.id)).toEqual([
       "mission.moat.v1", "mission.well.v1", "mission.dungeon.v1"
     ]);
-    expect(offered[0].missions.every((m) => m.status === "available")).toBe(true);
+    const byId = new Map(offered[0].missions.map((m) => [m.id, m.status]));
+    // V0.51 断言原为「15 个全 available」；V0.6 先决条件 3 边生效后，下游 3 个为 locked 派生态
+    expect(byId.get("mission.seven-steps.v1")).toBe("locked");
+    expect(byId.get("mission.broken-pipe.v1")).toBe("locked");
+    expect(byId.get("mission.material-budget.v1")).toBe("locked");
+    expect([...byId.values()].filter((s) => s === "available")).toHaveLength(12);
     expect(quests.length).toBeGreaterThan(0);
     expect(quests[0].quests.map((q) => q.id)).toEqual(["quest-moat", "quest-well", "quest-dungeon"]);
+  });
+
+  it("locked 派生态：前置完成前拒绝激活；完成后 mission.unlocked 发射一次且可激活（V06-011/012）", () => {
+    const unlocked: string[] = [];
+    events.on<{ missionId: string }>(MISSION_EVENTS.unlocked, (e) => unlocked.push(e.payload.missionId));
+    runtime.activate();
+    // 前置未完成：下游任务被锁定、激活被拒
+    expect(runtime.getMission("mission.seven-steps.v1")?.status).toBe("locked");
+    expect(runtime.getMission("mission.seven-steps.v1")?.progressText).toBe("先完成〈水往哪里流〉"); // V06-018 K3 锁定文案
+    expect(runtime.activateMission("mission.seven-steps.v1")).toBe(false);
+    expect(unlocked).toEqual([]);
+    // 无前置任务不受影响
+    expect(runtime.getMission("mission.water-flow.v1")?.status).toBe("available");
+    // 完成 water-flow：先建舞台（地下 y=-3 已有渗水 → 低处水迹），再放高处水源
+    buildCastleWaterStage((pos, id) => world.place(pos, id));
+    world.place(p(5, 4, 0), "water_source");
+    settle();
+    expect(runtime.getMission("mission.water-flow.v1")?.status).toBe("completed");
+    expect(unlocked).toEqual(["mission.seven-steps.v1"]);
+    expect(runtime.getMission("mission.seven-steps.v1")?.status).toBe("available");
+    expect(runtime.activateMission("mission.seven-steps.v1")).toBe(true);
+    // 幂等：继续刷新不重复发射
+    runtime.refresh();
+    expect(unlocked).toEqual(["mission.seven-steps.v1"]);
   });
 
   it("状态机：available → active，重复激活返回 false，事件按契约发射", () => {
@@ -162,6 +198,35 @@ describe("V51-007 MissionRuntimePlugin（状态机 + 双事件迁移期）", () 
     runtime.resetEvaluation();
     expect(runtime.getMission("mission.moat.v1")?.status).toBe("completed");
     expect(reward.has("mission.moat.v1")).toBe(true);
+  });
+
+  it("完成时按知识点落掌握证据：记录数 = knowledgePointIds 数、observation 为确定性摘要（V06-013/014）", () => {
+    const recorded: Array<readonly { knowledgePointId: string; observation: string }[]> = [];
+    class SpyStore {
+      private entries = new Map<string, Record<string, unknown>>();
+      get(id: string) { return (this.entries.get(id) as never) ?? null; }
+      set(id: string, patch: Record<string, unknown>) {
+        this.entries.set(id, { status: "available", hintsUsed: 0, ...patch });
+      }
+      recordMasteryEvidence(records: readonly { knowledgePointId: string; observation: string }[]) {
+        recorded.push(records);
+      }
+    }
+    const custom = new MissionRuntimePlugin(water, events, {
+      reward,
+      progressStore: new SpyStore() as never,
+      world: { blockAt: (position) => world.get(position)?.blockId, all: () => world.all() }
+    });
+    custom.activate();
+    buildCastleWaterStage((pos, id) => world.place(pos, id));
+    world.place(p(5, 4, 0), "water_source");
+    settle();
+    expect(custom.getMission("mission.water-flow.v1")?.status).toBe("completed");
+    expect(recorded).toHaveLength(1);
+    const kps = recorded[0].map((r) => r.knowledgePointId).sort();
+    expect(kps).toEqual(["kp.water.gravity.downhill", "kp.water.surface.support"]);
+    expect(recorded[0].every((r) => r.observation === "2/2")).toBe(true);
+    custom.dispose();
   });
 
   it("提示使用次数只记录不惩罚；used hint 后仍可完成任务", () => {

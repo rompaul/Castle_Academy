@@ -110,3 +110,48 @@ describe("V51-006 V0.5 三任务迁移等价性（AC-210 内容层）", () => {
     }
   });
 });
+
+describe("V06-006 schema v2 双模校验（ADR-0009）", () => {
+  const base = CASTLE_WATER_MISSIONS[0];
+
+  it("v1 缺省 schemaVersion 时校验行为逐字不变", () => {
+    const v1: MissionDefinition = { ...base };
+    delete (v1 as Partial<MissionDefinition>).schemaVersion;
+    delete (v1 as Partial<MissionDefinition>).knowledgePointIds;
+    expect(validateMissionDefinition(v1)).toEqual({ ok: true });
+    expect(validateMissionDefinition({ ...v1, schemaVersion: 1 })).toEqual({ ok: true });
+  });
+
+  it("v2 必须带非空 knowledgePointIds", () => {
+    const v2: MissionDefinition = { ...base, schemaVersion: 2 };
+    delete (v2 as Partial<MissionDefinition>).knowledgePointIds;
+    const v2Result = validateMissionDefinition(v2);
+    expect(v2Result.ok).toBe(false);
+    if (!v2Result.ok) {
+      expect(v2Result.errors.join()).toContain("knowledgePointIds");
+    }
+  });
+
+  it("v2 的 knowledgePointIds 每个必须已注册，未注册被拒", () => {
+    const good = { ...base, schemaVersion: 2, knowledgePointIds: ["kp.water.flow.range"] };
+    expect(validateMissionDefinition(good)).toEqual({ ok: true });
+    const bad = { ...base, schemaVersion: 2, knowledgePointIds: ["kp.not.registered"] };
+    const badResult = validateMissionDefinition(bad);
+    expect(badResult.ok).toBe(false);
+    if (!badResult.ok) expect(badResult.errors.join()).toContain("未注册");
+  });
+
+  it("预留前缀 kp.electric.* 未注册同样被拒（本版不注册电力点）", () => {
+    const bad = { ...base, schemaVersion: 2, knowledgePointIds: ["kp.electric.circuit.closed"] };
+    expect(validateMissionDefinition(bad).ok).toBe(false);
+  });
+
+  it("非法 schemaVersion 被拒", () => {
+    expect(validateMissionDefinition({ ...base, schemaVersion: 3 }).ok).toBe(false);
+  });
+
+  it("v1 显式携带 knowledgePointIds 时也必须已注册（不允许静默忽略）", () => {
+    const bad = { ...base, knowledgePointIds: ["kp.not.registered"] };
+    expect(validateMissionDefinition(bad).ok).toBe(false);
+  });
+});

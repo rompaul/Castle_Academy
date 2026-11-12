@@ -19,16 +19,32 @@ export interface MissionProgressEntry {
   hintsUsed: number;
 }
 
+/**
+ * V0.6 掌握证据记录（ADR-0010，V06-013）：任务完成时按知识点落档。
+ * observation 为评估器产出的确定性观察摘要（来自世界状态查询，无随机/时间/网络）；
+ * completedAt 是完成时刻戳（记录用途），不参与任何掌握度计算。
+ */
+export interface MasteryEvidenceRecord {
+  missionId: string;
+  evaluatorId: string;
+  knowledgePointId: string;
+  completedAt: string;
+  observation: string;
+}
+
 export interface LearnerProfile {
   id: string;
   nickname: string;
   ageBand: AgeBand;
   createdAt: string;
   missionProgress: Record<string, MissionProgressEntry>;
+  /** V0.6（ADR-0010）：按知识点聚合的掌握证据；v1 档案迁移时补空数组 */
+  masteryEvidence?: MasteryEvidenceRecord[];
 }
 
 export interface LearnerProfileStore {
-  version: 1;
+  /** V0.6 起 version 2（ADR-0010）；v1 旧档原子迁移，向后兼容读取 */
+  version: 1 | 2;
   activeProfileId: string;
   profiles: LearnerProfile[];
 }
@@ -79,11 +95,11 @@ export function isAgeBand(value: unknown): value is AgeBand {
   return typeof value === "string" && (AGE_BANDS as readonly string[]).includes(value);
 }
 
-/** 结构化校验：任何字段异常都判定为损坏，走容错重置而不是崩溃。 */
+/** 结构化校验：version 1 / 2 均合法（v2 多 masteryEvidence 可选字段）；其余异常判损坏走容错重置。 */
 export function isLearnerProfileStore(value: unknown): value is LearnerProfileStore {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const store = value as Record<string, unknown>;
-  if (store.version !== 1) return false;
+  if (store.version !== 1 && store.version !== 2) return false;
   if (typeof store.activeProfileId !== "string") return false;
   if (!Array.isArray(store.profiles)) return false;
   return store.profiles.every((item) => {
@@ -92,15 +108,39 @@ export function isLearnerProfileStore(value: unknown): value is LearnerProfileSt
     if (typeof profile.id !== "string" || typeof profile.nickname !== "string") return false;
     if (!isAgeBand(profile.ageBand) || typeof profile.createdAt !== "string") return false;
     if (!profile.missionProgress || typeof profile.missionProgress !== "object" || Array.isArray(profile.missionProgress)) return false;
-    return Object.values(profile.missionProgress as Record<string, unknown>).every((entry) => {
+    const entriesOk = Object.values(profile.missionProgress as Record<string, unknown>).every((entry) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
       const e = entry as Record<string, unknown>;
       return (e.status === "available" || e.status === "active" || e.status === "completed")
         && typeof e.hintsUsed === "number" && Number.isFinite(e.hintsUsed) && e.hintsUsed >= 0;
     });
+    if (!entriesOk) return false;
+    // v2 可选 masteryEvidence：存在时必须整体合法，不做静默修正
+    if (profile.masteryEvidence === undefined) return true;
+    if (!Array.isArray(profile.masteryEvidence)) return false;
+    return (profile.masteryEvidence as unknown[]).every((record) => {
+      if (!record || typeof record !== "object" || Array.isArray(record)) return false;
+      const r = record as Record<string, unknown>;
+      return typeof r.missionId === "string" && typeof r.evaluatorId === "string"
+        && typeof r.knowledgePointId === "string" && typeof r.completedAt === "string"
+        && typeof r.observation === "string";
+    });
   });
 }
 
 export function emptyStore(): LearnerProfileStore {
-  return { version: 1, activeProfileId: "", profiles: [] };
+  return { version: 2, activeProfileId: "", profiles: [] };
+}
+
+/** v1 → v2 原子迁移（ADR-0010 / V06-015）：只补 masteryEvidence 空数组与 version，幂等。 */
+export function migrateLearnerProfileStoreV1toV2(store: LearnerProfileStore): LearnerProfileStore {
+  if (store.version === 2) return store;
+  return {
+    ...store,
+    version: 2,
+    profiles: store.profiles.map((profile) => ({
+      ...profile,
+      masteryEvidence: profile.masteryEvidence ?? []
+    }))
+  };
 }

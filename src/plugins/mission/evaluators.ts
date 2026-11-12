@@ -151,6 +151,11 @@ export interface EvaluatorQuery {
 export interface EvaluatorResult {
   progress: number;
   complete: boolean;
+  /**
+   * V0.6（ADR-0010 / V06-013/014）确定性证据摘要：来自世界状态查询的观察计数，
+   * 无随机/时间/网络；运行时在任务完成时把它落入学习者档案的掌握证据。
+   */
+  evidence?: { observation: string };
 }
 
 export interface MissionEvaluator {
@@ -177,7 +182,16 @@ function createEvaluator(definition: QuestDefinition, id: string): MissionEvalua
     evaluate: (query) => {
       const state = evaluateQuests(query.water, query.everWet, query.measurementDone)
         .find((quest) => quest.id === definition.id)!;
-      return { progress: state.progress, complete: state.complete };
+      // V06-014：判定逻辑未动，只补确定性观察摘要（done/total 与 describe 同源）
+      const wet = definition.region.filter((cell) => query.water.hasWater(cell)).length;
+      const done = definition.direction === "fill"
+        ? wet
+        : definition.region.length - wet;
+      return {
+        progress: state.progress,
+        complete: state.complete,
+        evidence: { observation: `${done}/${definition.region.length}` }
+      };
     },
     describe: (query) => {
       const wet = definition.region.filter((cell) => query.water.hasWater(cell)).length;

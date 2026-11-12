@@ -13,7 +13,9 @@ import {
   type LearnerProfileStore,
   type LearnerProfileSwitchedPayload,
   type LearnerStore,
-  type MissionProgressEntry
+  type MissionProgressEntry,
+  migrateLearnerProfileStoreV1toV2,
+  type MasteryEvidenceRecord
 } from "./types";
 
 /**
@@ -123,11 +125,35 @@ export class LearnerProfilePlugin {
     return next;
   }
 
+  /**
+   * V0.6（ADR-0010 / V06-013）：记录掌握证据。只追加、不修改既有记录、不去重
+   * （同一任务重复完成时允许出现多条证据；掌握判定是 Phase 后续/将来消费方的职责）。
+   * 无档案时静默忽略。绝不写入世界存档。
+   */
+  recordMasteryEvidence(records: readonly MasteryEvidenceRecord[]): void {
+    if (records.length === 0) return;
+    const profile = this.state.profiles.find((p) => p.id === this.state.activeProfileId);
+    if (!profile) return;
+    profile.masteryEvidence = [...(profile.masteryEvidence ?? []), ...records];
+    this.persist();
+  }
+
+  getMasteryEvidence(): MasteryEvidenceRecord[] {
+    const profile = this.state.profiles.find((p) => p.id === this.state.activeProfileId);
+    return (profile?.masteryEvidence ?? []).map((r) => ({ ...r }));
+  }
+
   /** 一次性提示（档案损坏/存储不可用），UI 消费后清空。 */
   consumeNotice(): string | null {
     const message = this.notice;
     this.notice = null;
     return message;
+  }
+
+  /** V06-020（K6）：非消费式读取待展示提示。插件激活早于 UI 订阅，
+   * recovered 事件可能错过；UI 初始化时用本方法补读，不丢失提示。 */
+  peekNotice(): string | null {
+    return this.notice;
   }
 
   /** 供测试/“清除浏览器数据”路径使用：清空档案（不影响世界存档）。 */
@@ -169,7 +195,8 @@ export class LearnerProfilePlugin {
       return;
     }
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      && (parsed as Record<string, unknown>).version !== 1) {
+      && (parsed as Record<string, unknown>).version !== 1
+      && (parsed as Record<string, unknown>).version !== 2) {
       this.state = emptyStore();
       this.recover("unsupported-version", "档案来自较新版本，已重置；可以重新创建铭牌");
       return;
@@ -179,7 +206,15 @@ export class LearnerProfilePlugin {
       this.recover("corrupt", "档案数据读取失败，已重置；可以重新创建铭牌");
       return;
     }
-    this.state = parsed;
+    // V0.6（ADR-0010 / V06-015）：v1 旧档原子迁移到 v2（只补 version 与 masteryEvidence），
+    // 迁移后立即持久化一次；v2 档案幂等通过。
+    const migrated = migrateLearnerProfileStoreV1toV2(parsed);
+    if (migrated.version !== parsed.version) {
+      this.state = migrated;
+      this.persist();
+    } else {
+      this.state = migrated;
+    }
     // activeProfileId 指向不存在的档案时回退到第一个，保证 UI 永远有确定状态
     if (!parsed.profiles.some((p) => p.id === parsed.activeProfileId)) {
       this.state.activeProfileId = parsed.profiles[0]?.id ?? "";

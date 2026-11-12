@@ -27,8 +27,11 @@ import {
   type MissionActivatedPayload,
   type MissionCompletedPayload,
   type MissionOfferedPayload,
-  type MissionProgressUpdatedPayload
+  type MissionProgressUpdatedPayload,
+  type MissionUnlockedPayload
 } from "./events";
+import { isMissionUnlocked } from "../../content/knowledge/missionGraph";
+import type { MasteryEvidenceRecord } from "../learner/types";
 
 export interface MissionRuntimeOptions {
   missions?: readonly MissionDefinition[];
@@ -87,6 +90,10 @@ export class MissionRuntimePlugin {
   private readonly unsubscribe: Array<() => void> = [];
   /** V51-015+ 学习者文字证据：只在运行时内存，绝不写入档案 / 世界存档（ADR-0006 字段最小化） */
   private readonly textEvidence = new Map<string, string>();
+  /** V06-012：mission.unlocked 只在 locked → 可玩 转变时发射一次（确定性、可重放） */
+  private readonly unlockedNotified = new Set<string>();
+  /** V06-012：本轮会话中曾处于 locked 的任务（转变检测） */
+  private readonly seenLocked = new Set<string>();
   /** 结构性变化（放置方块 / 剖面切换 / 提交文字）需要一次收敛后的重算 */
   private structuralDirty = false;
   private readonly world?: WorldReadQuery;
@@ -145,6 +152,8 @@ export class MissionRuntimePlugin {
         this.completionSuppressed = true;
         this.textEvidence.clear(); // 别人的文字证据不得串到新档案
         this.structuralDirty = false;
+        this.seenLocked.clear(); // V06-012：解锁派生记忆随档案重置
+        this.unlockedNotified.clear();
         this.reloadFromStore();
         this.emitOffered();
       }));
@@ -165,11 +174,20 @@ export class MissionRuntimePlugin {
       const state = this.states.get(mission.id) ?? this.freshState(0, 0);
       const unavailable = this.getMissingCapabilities(mission.id).length > 0
         || !this.evaluators.has(mission.evaluatorId);
+      // V06-011：locked 为纯派生视图态（前置未完成），不落持久化
+      const locked = !unavailable
+        && state.status !== "completed"
+        && !isMissionUnlocked(mission.id, this.completedIds(), this.missions);
       const status = state.status === "completed"
         ? "completed"
         : unavailable ? "unavailable"
-          : state.status === "unavailable" ? "available" // 能力补齐后即时恢复
-            : state.status;
+          : locked ? "locked"
+            : state.status === "unavailable" ? "available" // 能力补齐后即时恢复
+              : state.status;
+      // V06-018（K3）：未完成前置的标题，按定义顺序；锁定文案「先完成〈任务名〉」
+      const prerequisiteTitles = mission.prerequisiteMissionIds
+        .filter((id) => !this.completedIds().has(id))
+        .map((id) => this.missions.find((m) => m.id === id)?.title ?? id);
       return {
         id: mission.id,
         title: mission.title,
@@ -179,10 +197,13 @@ export class MissionRuntimePlugin {
           ? "已完成"
           : status === "unavailable"
             ? "暂不可玩"
-            : this.formatProgress(mission, state.done, state.total),
+            : status === "locked"
+              ? prerequisiteTitles.length > 0 ? `先完成〈${prerequisiteTitles[0]}〉` : "未解锁"
+              : this.formatProgress(mission, state.done, state.total),
         ageScope: mission.ageScope,
         evaluatorId: mission.evaluatorId,
-        successMessage: mission.successMessage
+        successMessage: mission.successMessage,
+        prerequisiteTitles
       };
     });
   }
@@ -208,13 +229,14 @@ export class MissionRuntimePlugin {
     return this.getMissions().length > 0 && this.getMissions().every((m) => m.status === "completed");
   }
 
-  /** available → active（能力缺失或已完成时拒绝，不抛错）。 */
+  /** available → active（能力缺失、已完成或前置未完成时拒绝，不抛错）。 */
   activateMission(missionId: string): boolean {
     const definition = this.getDefinition(missionId);
     const state = this.states.get(missionId);
     if (!definition || !state) return false;
     if (this.getMissingCapabilities(missionId).length > 0 || !this.evaluators.has(definition.evaluatorId)) return false;
     if (state.status === "completed" || state.status === "active") return false;
+    if (!isMissionUnlocked(missionId, this.completedIds(), this.missions)) return false; // V06-011 locked 拒绝
     state.status = "active";
     this.progressStore.set(missionId, { status: "active" });
     this.events.emit<MissionActivatedPayload>(MISSION_EVENTS.activated, { missionId });
@@ -259,6 +281,8 @@ export class MissionRuntimePlugin {
     this.measurementUsed = false;
     this.allCompletedNotified = false;
     this.completionSuppressed = false;
+    this.seenLocked.clear();
+    this.unlockedNotified.clear();
     this.reloadFromStore();
     this.evaluate();
   }
@@ -287,6 +311,13 @@ export class MissionRuntimePlugin {
   }
 
   /* ---------------- 内部 ---------------- */
+
+  /** V06-011：已完成任务 ID 集合（locked 派生与解锁判定的唯一事实源） */
+  private completedIds(): ReadonlySet<string> {
+    return new Set(
+      [...this.states.entries()].filter(([, s]) => s.status === "completed").map(([id]) => id)
+    );
+  }
 
   private freshState(total: number, hintsUsed: number): MissionState {
     return { status: "available", progress: 0, done: 0, total, complete: false, hintsUsed };
@@ -362,6 +393,17 @@ export class MissionRuntimePlugin {
       }
       this.states.set(mission.id, state);
 
+      // V06-012：locked → 可玩 转变检测与一次性 mission.unlocked 发射（确定性、可重放）
+      const lockedNow = state.status !== "completed" && !unavailable
+        && !isMissionUnlocked(mission.id, this.completedIds(), this.missions);
+      if (lockedNow) {
+        this.seenLocked.add(mission.id);
+      } else if (this.seenLocked.has(mission.id) && !this.unlockedNotified.has(mission.id)) {
+        this.seenLocked.delete(mission.id);
+        this.unlockedNotified.add(mission.id);
+        this.events.emit<MissionUnlockedPayload>(MISSION_EVENTS.unlocked, { missionId: mission.id });
+      }
+
       this.events.emit<MissionProgressUpdatedPayload>(MISSION_EVENTS.progressUpdated, {
         missionId: mission.id,
         progress: state.progress,
@@ -372,13 +414,24 @@ export class MissionRuntimePlugin {
         this.completedNotified.add(mission.id);
         state.status = "completed";
         this.states.set(mission.id, state);
+        const completedAt = new Date().toISOString();
         this.progressStore.set(mission.id, {
           status: "completed",
           evidence: {
-            completedAt: new Date().toISOString(),
+            completedAt,
             evaluatorId: mission.evaluatorId
           }
         });
+        // V06-013/014：完成时按知识点落掌握证据（observation 为评估器产出的确定性摘要）
+        const evidenceRecords: MasteryEvidenceRecord[] = (mission.knowledgePointIds ?? []).map((knowledgePointId) => ({
+          missionId: mission.id,
+          evaluatorId: mission.evaluatorId,
+          knowledgePointId,
+          completedAt,
+          observation: evaluator?.evaluate(evaluatorQuery).evidence?.observation
+            ?? `${state.done}/${state.total}`
+        }));
+        if (evidenceRecords.length > 0) this.progressStore.recordMasteryEvidence?.(evidenceRecords);
 
         this.events.emit<MissionCompletedPayload>(MISSION_EVENTS.completed, {
           missionId: mission.id,

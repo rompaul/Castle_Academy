@@ -33,7 +33,8 @@ describe("V51-005 LearnerProfilePlugin（ADR-0006）", () => {
     expect(store.data["castle-academy-world-v1"]).toBe("{\"version\":1,\"blocks\":[]}");
 
     const parsed = JSON.parse(store.data[LEARNER_STORAGE_KEY]);
-    expect(parsed.version).toBe(1);
+    // V0.6（ADR-0010）：落盘 version 升级为 2；字段最小化断言保持不变
+    expect(parsed.version).toBe(2);
     expect(parsed.profiles).toHaveLength(1);
     expect(parsed.activeProfileId).toBe(parsed.profiles[0].id);
     expect(parsed.profiles[0]).not.toHaveProperty("school");
@@ -109,18 +110,82 @@ describe("V51-005 LearnerProfilePlugin（ADR-0006）", () => {
     expect(JSON.parse(store.data[LEARNER_STORAGE_KEY]).profiles).toHaveLength(1);
   });
 
-  it("结构非法 / 未知版本同样容错重置", () => {
+  it("结构非法 / 未知版本容错重置；v2 为合法版本正常加载（V06-015 / DEV-605 改写）", () => {
     const bad = new LearnerProfilePlugin(new EventBus(), memoryStore({
       [LEARNER_STORAGE_KEY]: JSON.stringify({ version: 1, activeProfileId: "x", profiles: [{ id: "x" }] })
     }));
     expect(() => bad.activate()).not.toThrow();
     expect(bad.consumeNotice()).toContain("已重置");
 
-    const future = new LearnerProfilePlugin(new EventBus(), memoryStore({
+    // DEV-605：V0.6 起 version 2 是合法版本，必须正常加载而非重置
+    const v2 = new LearnerProfilePlugin(new EventBus(), memoryStore({
       [LEARNER_STORAGE_KEY]: JSON.stringify({ version: 2, activeProfileId: "", profiles: [] })
+    }));
+    expect(() => v2.activate()).not.toThrow();
+    expect(v2.consumeNotice()).toBeNull();
+    expect(v2.snapshot().version).toBe(2);
+
+    // 真正的「较新版本」仍容错重置
+    const future = new LearnerProfilePlugin(new EventBus(), memoryStore({
+      [LEARNER_STORAGE_KEY]: JSON.stringify({ version: 99, activeProfileId: "", profiles: [] })
     }));
     expect(() => future.activate()).not.toThrow();
     expect(future.consumeNotice()).toContain("较新版本");
+  });
+
+  it("v1 旧档原子迁移到 v2：version 与 masteryEvidence 补齐、进度零丢失、幂等（V06-015）", () => {
+    const legacy = {
+      version: 1,
+      activeProfileId: "p1",
+      profiles: [{
+        id: "p1",
+        nickname: "旧档小明",
+        ageBand: "8-10",
+        createdAt: "2026-11-01T00:00:00.000Z",
+        missionProgress: {
+          "mission.moat.v1": { status: "completed", hintsUsed: 2, evidence: { completedAt: "2026-11-02T00:00:00.000Z", evaluatorId: "evaluator.moat" } }
+        }
+      }]
+    };
+    const store = memoryStore({ [LEARNER_STORAGE_KEY]: JSON.stringify(legacy) });
+    const plugin = new LearnerProfilePlugin(new EventBus(), store);
+    plugin.activate();
+    // 迁移零丢失
+    expect(plugin.getActiveProfile()?.nickname).toBe("旧档小明");
+    expect(plugin.getMissionProgress("mission.moat.v1")?.status).toBe("completed");
+    expect(plugin.getMissionProgress("mission.moat.v1")?.hintsUsed).toBe(2);
+    // 落盘已是 v2 且带空 masteryEvidence
+    const persisted = JSON.parse(store.data[LEARNER_STORAGE_KEY]);
+    expect(persisted.version).toBe(2);
+    expect(persisted.profiles[0].masteryEvidence).toEqual([]);
+    // 幂等：再次加载不再变化
+    const again = new LearnerProfilePlugin(new EventBus(), store);
+    again.activate();
+    expect(again.snapshot().version).toBe(2);
+    expect(again.getActiveProfile()?.nickname).toBe("旧档小明");
+  });
+
+  it("掌握证据：recordMasteryEvidence 只追加、可读取、无档案时静默（V06-013）", () => {
+    const plugin = new LearnerProfilePlugin(new EventBus(), memoryStore());
+    plugin.activate();
+    // 无档案：静默忽略
+    expect(() => plugin.recordMasteryEvidence([{
+      missionId: "mission.moat.v1", evaluatorId: "evaluator.moat",
+      knowledgePointId: "kp.water.flow.range", completedAt: "t0", observation: "38/40"
+    }])).not.toThrow();
+    expect(plugin.getMasteryEvidence()).toEqual([]);
+    // 有档案：追加成功
+    plugin.createProfile("证据甲", "8-10");
+    plugin.recordMasteryEvidence([
+      { missionId: "mission.moat.v1", evaluatorId: "evaluator.moat", knowledgePointId: "kp.water.flow.range", completedAt: "t0", observation: "38/40" },
+      { missionId: "mission.moat.v1", evaluatorId: "evaluator.moat", knowledgePointId: "kp.system.continuous_path", completedAt: "t0", observation: "38/40" }
+    ]);
+    expect(plugin.getMasteryEvidence()).toHaveLength(2);
+    expect(plugin.getMasteryEvidence()[0].knowledgePointId).toBe("kp.water.flow.range");
+    // 返回副本：外部修改不污染
+    const copy = plugin.getMasteryEvidence();
+    copy[0].observation = "篡改";
+    expect(plugin.getMasteryEvidence()[0].observation).toBe("38/40");
   });
 
   it("昵称校验：空 / 空白 / 超长拒绝，trim 后合法通过", () => {

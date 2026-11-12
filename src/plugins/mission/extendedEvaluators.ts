@@ -35,12 +35,12 @@ function wetCells(query: EvaluatorQuery, predicate: (cell: GridPosition) => bool
   return query.water.getWaterCells().filter(predicate).length;
 }
 
-/** 平实语言计数：done 上限即 total，不显示百分比。 */
+/** 平实语言计数：done 上限即 total，不显示百分比；V06-014 补确定性证据摘要。 */
 function result(done: number, total: number) {
   const clamped = Math.max(0, Math.min(done, total));
   return clamped >= total
-    ? { progress: 1, complete: true }
-    : { progress: clamped / total, complete: false };
+    ? { progress: 1, complete: true, evidence: { observation: `${total}/${total}` } }
+    : { progress: clamped / total, complete: false, evidence: { observation: `${clamped}/${total}` } };
 }
 
 function describe(done: number, total: number) {

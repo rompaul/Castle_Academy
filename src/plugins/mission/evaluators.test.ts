@@ -69,8 +69,9 @@ describe("V51-007 评估器注册表（AC-212 确定性）", () => {
   it("迁移等价性：空世界不伪完成地牢，moat 进度 0（AC-210/216）", () => {
     const h = harness();
     const registry = createDefaultEvaluatorRegistry();
-    expect(registry.get("evaluator.moat")!.evaluate(h.query())).toEqual({ progress: 0, complete: false });
-    expect(registry.get("evaluator.dungeon")!.evaluate(h.query())).toEqual({ progress: 1, complete: false });
+    // V06-014：EvaluatorResult 增加确定性 evidence.observation；progress/complete 判定不变
+    expect(registry.get("evaluator.moat")!.evaluate(h.query())).toEqual({ progress: 0, complete: false, evidence: { observation: "0/40" } });
+    expect(registry.get("evaluator.dungeon")!.evaluate(h.query())).toEqual({ progress: 1, complete: false, evidence: { observation: "4/4" } });
     const states = evaluateQuests(h.query().water);
     expect(states).toHaveLength(3);
     expect(states.map((s) => s.id)).toEqual(["quest-moat", "quest-well", "quest-dungeon"]);
