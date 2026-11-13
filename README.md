@@ -129,7 +129,7 @@ Historical evidence remains in `docs/v0.51/` (`V0.51_Acceptance_Report.md`, `V0.
 
 ## Release administration
 
-`master` (`0bd6e4f`) and tag `v0.6.0` are pushed to https://github.com/rompaul/Castle_Academy.git. The GitHub **Release page must be created manually** by the owner: `gh release create` returns 403 because the fine-grained PAT has no release write permission (same cause as v0.5.0 / v0.5.1). Use https://github.com/rompaul/Castle_Academy/releases/new with the full tag `v0.6.0` and copy the text from `docs/v0.6/V060_Release_Notes.md`.
+The release commit `0bd6e4f` and tag `v0.6.0` are pushed to https://github.com/rompaul/Castle_Academy.git; `master` may carry later documentation-only commits. The GitHub **Release page must be created manually** by the owner: `gh release create` returns 403 because the fine-grained PAT has no release write permission (same cause as v0.5.0 / v0.5.1). Use https://github.com/rompaul/Castle_Academy/releases/new with the full tag `v0.6.0` and copy the text from `docs/v0.6/V060_Release_Notes.md`.
 
 ## Next
 
