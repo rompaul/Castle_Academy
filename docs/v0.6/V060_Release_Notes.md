@@ -3,7 +3,8 @@
 **版本**：0.6.0（tag `v0.6.0`）
 **日期**：2026-11-12
 **主题**：知识与任务基础（Knowledge & Mission Foundation）
-**批准基线**：`768769b`（V0.5.1 master）；实施 commits `c3b51e2`（Phase 1+2）、`15aeca7`（Phase 3）
+**批准基线**：`768769b`（V0.5.1 master）；实施 commits `c3b51e2`（Phase 1+2）、`15aeca7`（Phase 3）、`0bd6e4f`（Phase 4 / 发布提交）
+**发布状态**：STOP GATE-3 已于 2026-11-12 经 owner 签核 **ACCEPT**；tag `v0.6.0` → `0bd6e4f`，master 与 tag 均已推送 origin。GitHub Release 页由 owner 手动创建（PAT 权限限制），本文件即其文案来源。
 
 ## 新增
 
@@ -61,4 +62,5 @@
 ## 门禁记录
 
 - G0 / GATE-1 / STOP GATE-1 / GATE-2：2026-11-12 全部 APPROVED（owner 签核，详见 `Castle_Academy_V0.6_Execution_Package/01_Execution/V06_Progress_Log.md`）。
-- **STOP GATE-3：PENDING** —— 发布评审（owner 签核 ACCEPT）后方可打 tag / 推送 / 建 Release 页。
+- **STOP GATE-3：ACCEPT（2026-11-12 owner 签核）** —— 已完成打 tag `v0.6.0`、推送 master + tag。**V0.6 RELEASED。** 剩余手工动作：GitHub Release 页（选完整 tag `v0.6.0`；仓库中不存在 `v0.6` 标签）。
+- V0.6.1 G0：发布对象确认条件已达成（基线候选 = `v0.6.0` / `0bd6e4f`），但实施仍冻结，须 owner 单独放行 V061-001。
