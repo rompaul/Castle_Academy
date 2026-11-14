@@ -69,6 +69,22 @@
 - 5173 dev server 为本次重截临时启动，脚本结束后已停止；E2E 由 Playwright 自管 `webServer`。
 - GitHub Release 页**仍需 owner 手动创建**：`gh release create` 恒 403（fine-grained PAT 无 release 写权限，v0.5.0 / v0.5.1 / v0.6.0 同因）。入口 https://github.com/rompaul/Castle_Academy/releases/new ，选完整 tag `v0.6.1`，复制 `docs/v0.6.1/V061_Release_Notes.md`。
 
-## 6. 发布对象登记
+## 6. 发布对象登记（2026-11-14 完成）
 
-见同目录 `V061_Progress_Log.md` 的「发布记录」节，以及 `git tag -l v0.6.1` / `git ls-remote origin refs/tags/v0.6.1`。
+| 项 | 值 |
+|---|---|
+| 发布 commit | **`f0980b8d3174ca819a961738fe6dd14264290b09`**（短 `f0980b8`） |
+| commit 标题 | `V0.6.1: Electrical Systems — derived electrical rules, 9 blocks, schema-v2 missions, MC-style block bar, version 0.6.1 (V061-004~030, GATE-3 ACCEPT)` |
+| 变更规模 | **102 文件**，+6911 / −116；提交后工作树干净 |
+| tag | **`v0.6.1`**（附注 tag，对象 `c0d1a603b9c7ff0dd331331b1732ac77b7c7330e`，解引用 → `f0980b8`） |
+| 版本号 | `package.json` / `package-lock.json` 根包 / 应用内标识均 `0.6.1` / `V0.6.1` |
+| 独立 canonical 集 | `docs/v0.6.1/screenshots/canonical/`（4 张场景 + 2 张 diff + `visual-regression.json`） |
+| 独立性能报告 | `docs/v0.6.1/V061_Performance_Paired.json`、`V061_PHASE4_VERIFICATION_REPORT.md` §3 |
+| Release notes / 已知限制 | `docs/v0.6.1/V061_Release_Notes.md`（已定稿） |
+| V0.7 交接 | `docs/v0.6.1/V061_V07_Handoff.md`（canonical 锚点、双态与 `F` 键、术语表与安全文案、工程模拟归 V0.7 Experiment） |
+| 远端 | `origin/master` = `f0980b8`；`refs/tags/v0.6.1^{}` = `f0980b8`（两次 push 均 exit 0，已 `git ls-remote` 核对） |
+| 既有 tag | `v0.6.0` 等 6 个未改动、未重打 |
+
+**未执行且不应重试：** `gh release create`（fine-grained PAT 无 release 写权限，恒 403，与 v0.5.0 / v0.6.0 同因）。GitHub Release 页由 owner 在 https://github.com/rompaul/Castle_Academy/releases/new 手动创建，选完整 tag `v0.6.1`，复制 `V061_Release_Notes.md`。
+
+工作区根目录的 `Castle_Academy_V0.6.1_Execution_Package/01_Execution/V061_Progress_Log.md`「发布记录」节与 `09_GOVERNANCE/PACKAGE_MANIFEST.json` 同步登记；这两处不属于源码仓库的发布 commit。
