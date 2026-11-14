@@ -2,6 +2,12 @@ import { useState } from "react";
 
 import type { MissionDefinition, MissionSummary } from "../../content/missions/types";
 import { getKnowledgePointById } from "../../content/knowledge/registry";
+import { ELECTRICAL_SAFETY_TEXTS } from "../../content/electrical/glossary";
+import {
+  getLowAgePathTitle, isLowAgeElectricalMission, LOW_AGE_PATH_IDS,
+  resolveHintLadder, type LowAgePathId,
+} from "../../content/electrical/lowAgeHints";
+import type { AgeBand } from "../../plugins/learner/types";
 import { Icon } from "../icons";
 
 interface Props {
@@ -14,6 +20,8 @@ interface Props {
   onFreeBuild: () => void;
   /** V51-016 交流类任务：提交文字证据。运行时只校验非空/最短长度，不评判内容 */
   onSubmitEvidence?: (text: string) => boolean;
+  /** DEV-616：当前学习者档案年龄带；6-7 档查看活动 C 时启用单系统子路径 */
+  ageBand?: AgeBand;
 }
 
 /**
@@ -23,16 +31,21 @@ interface Props {
  */
 export function MissionDetailPanel({
   definition, summary, hintsUsed, missingCapabilities,
-  onUseHint, onClose, onFreeBuild, onSubmitEvidence
+  onUseHint, onClose, onFreeBuild, onSubmitEvidence, ageBand
 }: Props) {
   const [revealed, setRevealed] = useState(0);
   const [note, setNote] = useState("");
   const [noteSaved, setNoteSaved] = useState(false);
+  /** DEV-616：低龄活动 C 的单系统子路径选择（不新增任务 ID，切换即重置已展开提示） */
+  const [lowAgePath, setLowAgePath] = useState<LowAgePathId>("C1");
   const unavailable = summary.status === "unavailable";
   const completed = summary.status === "completed";
   const locked = summary.status === "locked";
-  const hints = definition.hintLadder;
+  const showLowAgePaths = isLowAgeElectricalMission(definition.id, ageBand);
+  const hints = resolveHintLadder(definition, ageBand, lowAgePath);
   const isCommunication = definition.expressionForms.includes("communication");
+  /** V061-022（E7）：电力任务详情常驻安全提示，不随任务进度消失；非电力任务零 UI 变化。 */
+  const isElectrical = definition.requiredCapabilities.includes("electric.basic");
   // V06-017（K2）：v2 任务才显示知识点关联卡；未注册 ID 显示骨架占位，不显示内部 ID
   const knowledgePoints = definition.schemaVersion === 2
     ? (definition.knowledgePointIds ?? []).map((id) => ({ id, kp: getKnowledgePointById(id) }))
@@ -42,6 +55,11 @@ export function MissionDetailPanel({
     if (revealed >= hints.length) return;
     setRevealed((value) => value + 1);
     onUseHint();
+  };
+
+  const switchLowAgePath = (path: LowAgePathId) => {
+    setLowAgePath(path);
+    setRevealed(0);
   };
 
   const submitEvidence = () => {
@@ -89,6 +107,12 @@ export function MissionDetailPanel({
             <div className="ca-detail-section">
               <span className="ca-detail-label">目标</span>
               <div className="ca-goal-box">目标：{definition.goal}</div>
+              {/* DEV-615：电力任务把「按一下开关」的交互直接告诉孩子 */}
+              {isElectrical && (
+                <p className="ca-note" data-testid="electrical-toggle-hint">
+                  看着开关按 F，它会合上；再按一次又断开。左键照旧放方块。
+                </p>
+              )}
             </div>
 
             <div className="ca-detail-section">
@@ -104,6 +128,23 @@ export function MissionDetailPanel({
 
             <div className="ca-detail-section">
               <span className="ca-detail-label">提示（用了不扣分，可先看别的思路）</span>
+              {showLowAgePaths && (
+                /* DEV-616（AC-6743）：低龄只走单系统子路径，不并列 5 种失败原因 */
+                <div className="ca-low-age-paths" role="group" aria-label="先玩哪一步" data-testid="low-age-paths">
+                  {LOW_AGE_PATH_IDS.map((path) => (
+                    <button
+                      key={path}
+                      type="button"
+                      className={`ca-btn ca-btn-sm ${lowAgePath === path ? "ca-btn-primary" : "ca-btn-outline"}`}
+                      aria-pressed={lowAgePath === path}
+                      data-testid={`low-age-path-${path}`}
+                      onClick={() => switchLowAgePath(path)}
+                    >
+                      {getLowAgePathTitle(path)}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="ca-hints" data-testid="hint-ladder">
                 {hints.slice(0, revealed).map((hint, index) => (
                   <div className="ca-hint-item" key={index}>
@@ -152,6 +193,13 @@ export function MissionDetailPanel({
               <span className="ca-detail-label">换个思路 · 说说你的做法</span>
               <p className="ca-reflection">{definition.reflectionPrompt}</p>
             </div>
+
+            {isElectrical && (
+              <div className="ca-safety-note" data-testid="electrical-safety-notes">
+                <span className="ca-detail-label">安全提示（帮助面板常驻）</span>
+                <p className="ca-note">{ELECTRICAL_SAFETY_TEXTS.helpPersistent}</p>
+              </div>
+            )}
 
             {isCommunication && (
               <div className="ca-detail-section" data-testid="evidence-section">

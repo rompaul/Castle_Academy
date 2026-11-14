@@ -1,0 +1,85 @@
+{
+  "date": "2026-11-14T13:52:16.380Z",
+  "task": "V061-025 / DEV-608",
+  "baseline": {
+    "anchor": "docs/v0.6/screenshots/canonical/world-canvas-anchor-v060.png",
+    "main": "docs/v0.6/screenshots/canonical/world-main-v060.png",
+    "version": "tag v0.6.0 / 0bd6e4f"
+  },
+  "frozen": [
+    "world-canvas-anchor-v061.png",
+    "world-clean-v061.png",
+    "world-main-v061.png",
+    "electrical-scene-v061.png"
+  ],
+  "tolerancePerChannel": 8,
+  "anchor": {
+    "comparable": true,
+    "width": 960,
+    "height": 608,
+    "totalPixels": 583680,
+    "differingPixels": 0,
+    "diffRatio": 0,
+    "regionRatios": {
+      "worldCanvas": {
+        "diffPixels": 0,
+        "ratioPercent": 0
+      }
+    },
+    "yBands": {
+      "topbar": 0,
+      "worldUpper": 0,
+      "hotbarBand": 0,
+      "footer": 0
+    }
+  },
+  "main": {
+    "comparable": true,
+    "width": 1280,
+    "height": 720,
+    "totalPixels": 921600,
+    "differingPixels": 70189,
+    "diffRatio": 7.616,
+    "regionRatios": {
+      "topbar": {
+        "diffPixels": 26,
+        "ratioPercent": 0.027
+      },
+      "footer": {
+        "diffPixels": 20,
+        "ratioPercent": 0.043
+      },
+      "questPanel": {
+        "diffPixels": 0,
+        "ratioPercent": 0
+      },
+      "worldCanvas": {
+        "diffPixels": 47358,
+        "ratioPercent": 8.114
+      }
+    },
+    "yBands": {
+      "topbar": 26,
+      "worldUpper": 0,
+      "hotbarBand": 70143,
+      "footer": 20
+    }
+  },
+  "hudAttribution": {
+    "differingPixels": 70189,
+    "hotbarBandPixels": 70143,
+    "hotbarBandSharePercent": 99.93,
+    "note": "全屏差异集中在 y>=580 的热栏带（34 格平铺 → 9 格 + 分类入口）；3D 世界区域零差异由 anchor 0px 独立验证。"
+  },
+  "electricalScene": {
+    "loadState": "powered",
+    "drawCalls": 338
+  },
+  "pageErrors": [],
+  "verdict": {
+    "AC-6750 worldCanvas 0px": "PASS",
+    "AC-6750 HUD <=0.5%": "SUPERSEDED by DDR-0002 section 3 whitelist (owner signed STOP GATE-2 2026-11-14); full-screen HUD differences attributed to intentional changes, see main.regionRatios",
+    "AC-6751 electrical scene": "PASS (frozen separately)"
+  },
+  "note": "锚点截图隐藏全部 HUD；world-main 含 HUD，其差异按 DDR-0002 白名单归因，不作为世界渲染回归。"
+}

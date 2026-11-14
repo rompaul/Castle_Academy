@@ -206,6 +206,52 @@ export const BLOCKS = [
     model: CUBE_MODEL,
     material: { top: "water_pipe_blue_top", side: "water_pipe_blue_side", bottom: "water_pipe_blue_bottom", texelSize: 16 },
     behavior: DEFAULT_BEHAVIOR },
+
+  /* ---------- V0.6.1 电力 / 水联动方块（只追加，既有 25 个 ID 与顺序零变更） ----------
+   * 契约：ADR-0011 决策 5/6、ADR-0013 决策 1/9/10、V061_Block_Style_Board.md §1/§2。
+   * - 开关与阀门两态用两个 blockId 表达；`WorldSnapshot v1` 无朝向字段，全部 orientation: "fixed"。
+   * - 通电 / 断电是派生态：不烘焙第二套纹理、不写回 WorldState。
+   * - 角色语义由 `src/core/electrical/types.ts` 的 ELECTRICAL_BLOCK_ROLES 持有，此处只注册视觉/行为。
+   * - 儿童可见名统一用「电」；`power_source_low_voltage` 等技术命名只作内部 ID。
+   * - 阀门经 V061-001 全库检索确认 V0.5/V0.6 无等价物，故新建两个 ID（ADR-0011 决策 6）。
+   * - 颜色 / swatch 按风格板 §1：形状 + 亮度为双态主区分，颜色不作为唯一信号。
+   */
+  { id: "power_source_low_voltage", name: "电源", color: 0x4a4a52, swatch: "#4a4a52",
+    model: CUBE_MODEL,
+    material: { top: "power_source_low_voltage_top", side: "power_source_low_voltage_side", bottom: "power_source_low_voltage_bottom", texelSize: 16 },
+    behavior: DEFAULT_BEHAVIOR },
+  { id: "wire_basic", name: "电线", color: 0xc4bda6, swatch: "#c4bda6",
+    model: CUBE_MODEL,
+    material: { top: "wire_basic_top", side: "wire_basic_side", bottom: "wire_basic_bottom", texelSize: 16 },
+    behavior: DEFAULT_BEHAVIOR },
+  { id: "switch_open", name: "开关（断开）", color: 0x6e7378, swatch: "#6e7378",
+    model: CUBE_MODEL,
+    material: { top: "switch_open_top", side: "switch_open_side", bottom: "switch_open_bottom", texelSize: 16 },
+    behavior: DEFAULT_BEHAVIOR },
+  { id: "switch_closed", name: "开关（合上）", color: 0x6e7378, swatch: "#6e7378",
+    model: CUBE_MODEL,
+    material: { top: "switch_closed_top", side: "switch_closed_side", bottom: "switch_closed_bottom", texelSize: 16 },
+    behavior: DEFAULT_BEHAVIOR },
+  { id: "lamp_basic", name: "灯", color: 0xd8d4c4, swatch: "#d8d4c4",
+    model: CUBE_MODEL,
+    material: { top: "lamp_basic_top", side: "lamp_basic_side", bottom: "lamp_basic_bottom", texelSize: 16 },
+    behavior: DEFAULT_BEHAVIOR },
+  { id: "signal_beacon", name: "信标", color: 0x3f4a54, swatch: "#3f4a54",
+    model: CUBE_MODEL,
+    material: { top: "signal_beacon_top", side: "signal_beacon_side", bottom: "signal_beacon_bottom", texelSize: 16 },
+    behavior: DEFAULT_BEHAVIOR },
+  { id: "water_pump_basic", name: "水泵", color: 0x4f7f96, swatch: "#4f7f96",
+    model: CUBE_MODEL,
+    material: { top: "water_pump_basic_top", side: "water_pump_basic_side", bottom: "water_pump_basic_bottom", texelSize: 16 },
+    behavior: DEFAULT_BEHAVIOR },
+  { id: "water_valve_open", name: "阀门（开）", color: 0x3f6b82, swatch: "#3f6b82",
+    model: CUBE_MODEL,
+    material: { top: "water_valve_open_top", side: "water_valve_open_side", bottom: "water_valve_open_bottom", texelSize: 16 },
+    behavior: DEFAULT_BEHAVIOR },
+  { id: "water_valve_closed", name: "阀门（闭）", color: 0x3f6b82, swatch: "#3f6b82",
+    model: CUBE_MODEL,
+    material: { top: "water_valve_closed_top", side: "water_valve_closed_side", bottom: "water_valve_closed_bottom", texelSize: 16 },
+    behavior: DEFAULT_BEHAVIOR },
 ] as const;
 
 export type BlockId = typeof BLOCKS[number]["id"];

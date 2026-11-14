@@ -32,6 +32,8 @@ import {
 } from "./events";
 import { isMissionUnlocked } from "../../content/knowledge/missionGraph";
 import type { MasteryEvidenceRecord } from "../learner/types";
+import type { ElectricalQuery } from "../electrical/query";
+import { ELECTRICAL_EVENTS } from "../electrical/events";
 
 export interface MissionRuntimeOptions {
   missions?: readonly MissionDefinition[];
@@ -44,6 +46,8 @@ export interface MissionRuntimeOptions {
   world?: WorldReadQuery;
   /** V51-016 剖面视图查询（剖面侦探）；未注入时恒为 false */
   sectionEnabled?: () => boolean;
+  /** V0.6.1（V061-021）电力只读查询；未注入时电力评估器恒 0 进度，旧测试零影响 */
+  electrical?: () => ElectricalQuery;
 }
 
 interface MissionState {
@@ -98,6 +102,7 @@ export class MissionRuntimePlugin {
   private structuralDirty = false;
   private readonly world?: WorldReadQuery;
   private readonly sectionEnabled: () => boolean;
+  private readonly electrical?: () => ElectricalQuery;
 
   constructor(
     private readonly water: WaterPlugin,
@@ -111,6 +116,7 @@ export class MissionRuntimePlugin {
     this.progressStore = options.progressStore ?? new InMemoryMissionProgressStore();
     this.world = options.world;
     this.sectionEnabled = options.sectionEnabled ?? (() => false);
+    this.electrical = options.electrical;
   }
 
   activate(): void {
@@ -135,6 +141,12 @@ export class MissionRuntimePlugin {
       // 剖面切换不改变水域，WaterPlugin 不会发射任何 tick；此处直接重算一次。
       this.events.on("section.view.changed", () => {
         this.structuralDirty = true;
+        this.evaluate();
+      }),
+      // V0.6.1：电力重算不改变水域，WaterPlugin 不会发 tick；此处补一次确定性重算。
+      // 事件单向：world.block.* → electric.* → 任务判定；任务判定不触发电力重算。
+      this.events.on(ELECTRICAL_EVENTS.networkChanged, () => {
+        this.structuralDirty = false;
         this.evaluate();
       }),
       this.events.on("water.simulation.tick", () => {
@@ -357,7 +369,8 @@ export class MissionRuntimePlugin {
       measurementDone: this.measurementUsed,
       world: this.world,
       textEvidence: this.textEvidence as ReadonlyMap<string, string>,
-      sectionEnabled: this.sectionEnabled()
+      sectionEnabled: this.sectionEnabled(),
+      electrical: this.electrical?.()
     };
   }
 

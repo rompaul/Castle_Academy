@@ -15,6 +15,8 @@ import type { MissionDefinition, MissionSummary } from "../content/missions/type
 import type { AgeBand, LearnerProfile } from "../plugins/learner/types";
 import type { MissionRuntimePlugin } from "../plugins/mission/MissionRuntimePlugin";
 import type { LearnerProfilePlugin } from "../plugins/learner/LearnerProfilePlugin";
+import { deriveElectricalStatus } from "../content/electrical/status";
+import type { ElectricalStatusKey } from "../content/electrical/glossary";
 
 export interface GameActions {
   reset: () => void;
@@ -46,6 +48,10 @@ export interface GameActions {
   getMissingCapabilities: (id: string) => string[];
   /** V51-016 交流类任务文字证据（只留运行时内存，不进任何存档） */
   submitTextEvidence: (missionId: string, text: string) => boolean;
+  /** V0.6.1：电力状态消息只读派生（干净世界返回 null，UI 不显示） */
+  getElectricalStatus: () => ElectricalStatusKey | null;
+  /** DEV-615：注视开关 / 阀门时按一下切换两态（「生活中的开关」） */
+  toggleFocusedBlock: () => boolean;
 }
 
 interface Props {
@@ -127,7 +133,12 @@ export function GameCanvas({ selectedBlock, onPlayingChange, onMessage, onPersis
       useHint: (id) => engine.missionRuntime.useHint(id),
       getHintsUsed: (id) => engine.missionRuntime.getHintsUsed(id),
       getMissingCapabilities: (id) => engine.missionRuntime.getMissingCapabilities(id),
-      submitTextEvidence: (missionId, text) => engine.missionRuntime.submitTextEvidence(missionId, text)
+      submitTextEvidence: (missionId, text) => engine.missionRuntime.submitTextEvidence(missionId, text),
+      getElectricalStatus: () => deriveElectricalStatus({
+        loadStates: engine.electricalPlugin.getQuery().getLoadStates(),
+        blocks: engine.world.all()
+      }),
+      toggleFocusedBlock: () => engine.toggleFocusedBlock()
     };
 
     // Persist layer/section view state whenever it changes (V0.4).

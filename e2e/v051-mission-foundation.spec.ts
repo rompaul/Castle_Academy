@@ -18,7 +18,7 @@ test("V0.51 测试钩子：三任务、默认无档案、独立 localStorage key
       keys: Object.keys(localStorage).sort()
     };
   });
-  expect(result.missions).toHaveLength(15);
+  expect(result.missions).toHaveLength(18); // V0.6.1 末尾追加 3 个电力任务（DEV-613 裁定 A）
   expect(result.missions.slice(0, 3).map((m: { id: string }) => m.id)).toEqual([
     "mission.moat.v1", "mission.well.v1", "mission.dungeon.v1"
   ]);
@@ -92,7 +92,7 @@ test("档案损坏：容错重置且应用照常启动", async ({ page }) => {
     return { notice: a.consumeLearnerNotice(), missions: a.getMissions().length, profile: a.getActiveProfile() };
   });
   expect(result.notice).toContain("已重置");
-  expect(result.missions).toBe(15);
+  expect(result.missions).toBe(18); // V0.6.1 全量任务数（DEV-613 裁定 A）
   expect(result.profile).toBeNull();
   expect(pageErrors).toEqual([]);
 });

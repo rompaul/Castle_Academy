@@ -376,6 +376,161 @@ function waterPipeCap(): HTMLCanvasElement {
   });
 }
 
+/* ---------- V0.6.1 电力 / 水联动方块：16×16 程序化原创纹样（V061-007） ----------
+ * 设计：V061_Block_Style_Board.md §1/§2 / ADR-0013 决策 1~4。
+ * - 每个 ID 恰有 top + side 两个专属绘制函数，bottom 复用既有共享函数 → 9×2 = +18 格。
+ * - 图案由确定性坐标判据构成，底色用 mulberry32 固定 seed 做低噪点色差（"Crafted, not noisy"）。
+ * - 通电态不进图集：逐段点亮由派生 overlay / 独立材质实例完成，绝不烘焙第二套纹理。
+ * - 形状（触点 / 闸板 / 叶轮 / 十字）是双态主区分手段，颜色只作辅助，满足 AC-6735。
+ */
+interface ElectricalFaceSpec {
+  seed: number;
+  tones: readonly string[];
+  motif: (x: number, y: number) => string | null;
+}
+
+function electricalFace(spec: ElectricalFaceSpec): () => HTMLCanvasElement {
+  return () => {
+    const rng = mulberry32(spec.seed);
+    return generateCanvas((x, y) =>
+      spec.motif(x, y) ?? spec.tones[Math.floor(rng() * spec.tones.length)]
+    );
+  };
+}
+
+/** 电源：深石底 + 中心暖金圆符号 + 四角铆钉（源恒供，不做灭态）。 */
+const powerSourceTop = electricalFace({
+  seed: 90, tones: ["#4A4A52", "#53535C", "#42424A"],
+  motif: (x, y) => {
+    const d = (x - 7.5) ** 2 + (y - 7.5) ** 2;
+    if (d >= 16 && d <= 25) return "#E6B44A";
+    if (d < 9) return "#8A6A2E";
+    if ((x === 1 || x === 14) && (y === 1 || y === 14)) return "#C9A15B";
+    return null;
+  },
+});
+const powerSourceSide = electricalFace({
+  seed: 91, tones: ["#4A4A52", "#53535C"],
+  motif: (_x, y) => (y === 0 || y === 15 ? "#2F2F36" : null),
+});
+
+/** 电线：浅石灰底 + 中央深灰细线十字（六向暗示，通电时逐段点亮）。 */
+const wireTop = electricalFace({
+  seed: 92, tones: ["#C4BDA6", "#BDB69F", "#CDC6AF"],
+  motif: (x, y) => {
+    if (x >= 6 && x <= 9 && y >= 6 && y <= 9) return "#3E3C36";
+    if (x === 7 || x === 8 || y === 7 || y === 8) return "#5A574E";
+    return null;
+  },
+});
+const wireSide = electricalFace({
+  seed: 93, tones: ["#C4BDA6", "#BDB69F"],
+  motif: (_x, y) => (y === 7 || y === 8 ? "#5A574E" : y % 5 === 0 ? "#A9A28D" : null),
+});
+
+/** 开关（断开）：石底 + 明显错开的两触点 + 抬起的拨杆。 */
+const switchOpenTop = electricalFace({
+  seed: 94, tones: ["#6E7378", "#757A80", "#676C71"],
+  motif: (x, y) => {
+    if (x >= 2 && x <= 4 && y >= 8 && y <= 10) return "#D8C58A";
+    if (x >= 11 && x <= 13 && y >= 3 && y <= 5) return "#D8C58A";
+    if (x >= 4 && x <= 10 && y === 13 - Math.floor((x - 4) / 2)) return "#B9A67A";
+    return null;
+  },
+});
+const switchOpenSide = electricalFace({
+  seed: 95, tones: ["#6E7378", "#757A80"],
+  motif: (x, y) => (x >= 4 && x <= 10 && y === 12 - Math.floor((x - 4) / 2) ? "#B9A67A" : null),
+});
+
+/** 开关（合上）：同石底 + 两触点接通 + 放平的拨杆。 */
+const switchClosedTop = electricalFace({
+  seed: 96, tones: ["#6E7378", "#757A80", "#676C71"],
+  motif: (x, y) => {
+    if (y >= 7 && y <= 8 && x >= 2 && x <= 13) return "#D8C58A";
+    if (x >= 6 && x <= 9 && y >= 4 && y <= 5) return "#B9A67A";
+    return null;
+  },
+});
+const switchClosedSide = electricalFace({
+  seed: 97, tones: ["#6E7378", "#757A80"],
+  motif: (_x, y) => (y === 7 || y === 8 ? "#D8C58A" : null),
+});
+
+/** 灯：灰白灯罩 + 暗芯（通电态由独立材质实例 emissive / overlay 呈现，不烘焙第二套）。 */
+const lampTop = electricalFace({
+  seed: 98, tones: ["#D8D4C4", "#D2CEBE", "#E0DCCC"],
+  motif: (x, y) => {
+    const d = (x - 7.5) ** 2 + (y - 7.5) ** 2;
+    if (d < 9) return "#4A4A44";
+    if (x === 0 || x === 15 || y === 0 || y === 15) return "#A9A69A";
+    return null;
+  },
+});
+const lampSide = electricalFace({
+  seed: 99, tones: ["#D8D4C4", "#D2CEBE"],
+  motif: (_x, y) => (y >= 6 && y <= 9 ? "#4A4A44" : y === 0 || y === 15 ? "#A9A69A" : null),
+});
+
+/** 信标：深色柱体 + 暗色顶窗 + 上向短条（形状而非发光仪表盘）。 */
+const beaconTop = electricalFace({
+  seed: 100, tones: ["#3F4A54", "#45515C", "#39434C"],
+  motif: (x, y) => {
+    if (x >= 5 && x <= 10 && y >= 5 && y <= 10) return "#2B333B";
+    if (x === 7 || x === 8) return "#5C6B78";
+    return null;
+  },
+});
+const beaconSide = electricalFace({
+  seed: 101, tones: ["#3F4A54", "#45515C"],
+  motif: (x, y) => (y <= 3 ? "#2B333B" : x % 5 === 0 ? "#5C6B78" : null),
+});
+
+/** 水泵：蓝灰泵体 + 静止叶轮 + 出口侧金色小标记。 */
+const pumpTop = electricalFace({
+  seed: 102, tones: ["#4F7F96", "#5889A0", "#48758B"],
+  motif: (x, y) => {
+    const d = (x - 8) ** 2 + (y - 8) ** 2;
+    if (d < 16 && (x + y) % 3 === 0) return "#8FC0D6";
+    if (d >= 16 && d <= 25) return "#2E5E7C";
+    if (x >= 13 && y >= 6 && y <= 9) return "#E6B44A";
+    return null;
+  },
+});
+const pumpSide = electricalFace({
+  seed: 103, tones: ["#4F7F96", "#5889A0"],
+  motif: (x, y) => (x >= 12 && y >= 5 && y <= 10 ? "#E6B44A" : y % 5 === 0 ? "#2E5E7C" : null),
+});
+
+/** 阀门（开）：蓝灰阀体 + 通道贯通纹样。 */
+const valveOpenTop = electricalFace({
+  seed: 104, tones: ["#3F6B82", "#47738B", "#3A6278"],
+  motif: (_x, y) => {
+    if (y === 5 || y === 10) return "#2E5E7C";
+    if (y >= 6 && y <= 9) return "#6FB6D8";
+    return null;
+  },
+});
+const valveOpenSide = electricalFace({
+  seed: 105, tones: ["#3F6B82", "#47738B"],
+  motif: (_x, y) => (y >= 6 && y <= 9 ? "#6FB6D8" : y === 5 || y === 10 ? "#2E5E7C" : null),
+});
+
+/** 阀门（闭）：同阀体 + 明显横断闸板（形状区分，不依赖动画或颜色）。 */
+const valveClosedTop = electricalFace({
+  seed: 106, tones: ["#3F6B82", "#47738B", "#3A6278"],
+  motif: (x, y) => {
+    if (x >= 7 && x <= 8) return "#213A48";
+    if (y >= 6 && y <= 9 && x < 7) return "#4A7F9B";
+    if (x === 0 || x === 15) return "#2E5E7C";
+    return null;
+  },
+});
+const valveClosedSide = electricalFace({
+  seed: 107, tones: ["#3F6B82", "#47738B"],
+  motif: (x, y) => (x >= 7 && x <= 8 ? "#213A48" : y === 0 || y === 15 ? "#2E5E7C" : null),
+});
+
 /* ---------- 纹理注册表 ---------- */
 interface TextureSet {
   top: THREE.CanvasTexture;
@@ -465,6 +620,38 @@ const GENERATORS: Record<string, () => HTMLCanvasElement> = {
   "water_pipe_blue:top": waterPipeCap,
   "water_pipe_blue:side": waterPipeSide,
   "water_pipe_blue:bottom": waterPipeCap,
+
+  /* ---------- V0.6.1 电力 / 水联动方块（V061-007 正式纹样） ----------
+   * top / side 为 9 类各自的专属绘制函数（18 个新瓦片）；bottom 一律复用既有共享函数。
+   * 通电 / 断电双态不进图集：由派生 overlay 网格与独立材质实例呈现。
+   */
+  "power_source_low_voltage:top": powerSourceTop,
+  "power_source_low_voltage:side": powerSourceSide,
+  "power_source_low_voltage:bottom": layeredStone,
+  "wire_basic:top": wireTop,
+  "wire_basic:side": wireSide,
+  "wire_basic:bottom": foundationConcrete,
+  "switch_open:top": switchOpenTop,
+  "switch_open:side": switchOpenSide,
+  "switch_open:bottom": layeredStone,
+  "switch_closed:top": switchClosedTop,
+  "switch_closed:side": switchClosedSide,
+  "switch_closed:bottom": layeredStone,
+  "lamp_basic:top": lampTop,
+  "lamp_basic:side": lampSide,
+  "lamp_basic:bottom": plasterWall,
+  "signal_beacon:top": beaconTop,
+  "signal_beacon:side": beaconSide,
+  "signal_beacon:bottom": layeredStone,
+  "water_pump_basic:top": pumpTop,
+  "water_pump_basic:side": pumpSide,
+  "water_pump_basic:bottom": waterPipeSide,
+  "water_valve_open:top": valveOpenTop,
+  "water_valve_open:side": valveOpenSide,
+  "water_valve_open:bottom": waterPipeSide,
+  "water_valve_closed:top": valveClosedTop,
+  "water_valve_closed:side": valveClosedSide,
+  "water_valve_closed:bottom": waterPipeSide,
 };
 
 /**
@@ -513,7 +700,9 @@ export const TEXTURE_SIZE = TEX_SIZE;
 
 /* ---------- 纹理图集（atlas，draw call 优化） ---------- */
 
-/** 图集网格：8×8 个 16px 瓦片 = 128×128 canvas（唯一瓦片 ~25 个，余量充足） */
+/** 图集网格：8×8 个 16px 瓦片 = 128×128 canvas
+ * V061-007 运行时实测：31（V0.6 基线）+ 18（9 类电力方块 top/side）= 49 / 64，余量 15。
+ * 上限不扩容；双态不进图集。 */
 const ATLAS_COLS = 8;
 const ATLAS_ROWS = 8;
 
@@ -527,8 +716,8 @@ export interface BlockAtlas {
 
 /**
  * 将全部方块面纹理烘焙进单张图集。
- * 相同绘制函数共享同一瓦片（darkSoil 被 dirt 三面 + grass bottom 复用等），
- * 最终唯一瓦片约 25 个，远小于 64 格上限。
+ * 相同绘制函数共享同一瓦片（darkSoil 被 dirt 三面 + grass bottom 复用等）。
+ * V061-007 运行时实测 49 个唯一瓦片，小于 64 格上限；溢出仍直接抛错、不静默扩容。
  * NearestFilter + 关闭 mipmap 避免瓦片间渗色。
  */
 export function buildBlockAtlas(): BlockAtlas {

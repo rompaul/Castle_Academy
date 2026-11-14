@@ -22,21 +22,25 @@ describe("textureGenerator registry (V042-007)", () => {
     }
   });
 
-  it("全部 25 个 V0.3+V0.4.2+V0.5 块都有纹理集", () => {
+  it("全部 25 个既有块 + 9 个 V0.6.1 电力块都有纹理集", () => {
     const all = [
       "grass", "dirt", "stone", "wood", "sand", "brick", "glass",
       "sandstone_warm", "rock_moss", "gravel", "wood_walnut", "brick_limestone",
       "tile_slate", "foundation_concrete", "footing_carved", "wall_plaster",
       "wall_timber_frame", "tunnel_lining", "pillar_corner", "arch_keystone",
       "stair_stone", "window_frame",
+      "water_source", "drain_channel", "water_pipe_blue",
+      "power_source_low_voltage", "wire_basic", "switch_open", "switch_closed",
+      "lamp_basic", "signal_beacon", "water_pump_basic",
+      "water_valve_open", "water_valve_closed",
     ];
     for (const id of all) {
       expect(hasTextureSet(id), `missing texture set for ${id}`).toBe(true);
     }
   });
 
-  it("导出的带纹理块 ID 列表与 22 块一致", () => {
-    expect(BLOCK_IDS_WITH_TEXTURES.length).toBe(25);
+  it("导出的带纹理块 ID 列表与 34 块一致", () => {
+    expect(BLOCK_IDS_WITH_TEXTURES.length).toBe(34);
     expect(BLOCK_IDS_WITH_TEXTURES).toContain("grass");
     expect(BLOCK_IDS_WITH_TEXTURES).toContain("window_frame");
     expect(BLOCK_IDS_WITH_TEXTURES).toContain("stair_stone");

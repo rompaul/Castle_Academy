@@ -3,6 +3,8 @@ import { positionKey } from "../../core/world/coordinates";
 import type { BlockId } from "../../core/world/blocks";
 import type { WorldState } from "../../core/world/WorldState";
 import type { EventBus } from "../../core/events/EventBus";
+import type { PumpOutputPort } from "../electrical/events";
+import { ELECTRICAL_EVENTS, type ElectricalNetworkChangedPayload } from "../electrical/events";
 import {
   computeWater,
   DEFAULT_WATER_SIM_CONFIG,
@@ -65,11 +67,26 @@ export class WaterPlugin {
   private timer: ReturnType<typeof setInterval> | null = null;
   private active = false;
   private readonly unsubscribe: Array<() => void> = [];
+  /** V0.6.1（V061-015）：水侧只读泵输出窄端口，由 composition root 注入；不 import ElectricalPlugin。 */
+  private pumpOutputPort: PumpOutputPort | null = null;
+  private lastPumpActiveKeys: readonly string[] = [];
 
   constructor(world: WorldState, events: EventBus, config?: Partial<WaterSimConfig>) {
     this.world = world;
     this.events = events;
     this.config = { ...DEFAULT_WATER_SIM_CONFIG, ...config };
+  }
+
+  /**
+   * 注入 / 移除泵输出端口（V061-014 窄公共契约）。
+   * 只在电力侧明确提供时生效；未提供时水行为与 V0.5 / V0.6 逐字一致。
+   */
+  setPumpOutputPort(port: PumpOutputPort | null): void {
+    this.pumpOutputPort = port;
+    if (this.active) {
+      this.markDirty();
+      this.tick();
+    }
   }
 
   /** 生命周期：activate（CA-TECH-001） */
@@ -82,6 +99,15 @@ export class WaterPlugin {
       }),
       this.events.on<{ position: GridPosition }>("world.block.removed", () => {
         this.markDirty();
+      }),
+      // V0.6.1：电力网络变化后，仅在泵输出集合实际变化时重算水一次（ADR-0011 决策 9）。
+      // 水侧只读 pumpActiveKeys 判定是否脏，端口值由 ElectricalQuery 提供；不形成反向事件。
+      this.events.on<ElectricalNetworkChangedPayload>(ELECTRICAL_EVENTS.networkChanged, (event) => {
+        const keys = [...event.payload.pumpActiveKeys].sort();
+        if (keys.join("|") !== this.lastPumpActiveKeys.join("|")) {
+          this.lastPumpActiveKeys = keys;
+          this.markDirty();
+        }
       })
     );
     this.timer = setInterval(() => this.tick(), this.config.tickIntervalMs);
@@ -128,13 +154,36 @@ export class WaterPlugin {
       .filter((record) => record.blockId === "water_source")
       .map((record) => record.position);
 
+    // V0.6.1（Q-2 / ADR-0011 决策 7/8）：通电泵在正上方相邻空格提供二值虚拟水源。
+    // 「下方进」只是儿童可见叙事，不写成模拟规则；出口被占据时不伪造出水（AC-6724/6729）。
+    const pumpSources: GridPosition[] = [];
+    if (this.pumpOutputPort !== null) {
+      for (const record of this.world.all()) {
+        if (record.blockId !== "water_pump_basic") continue;
+        if (!this.pumpOutputPort.isPumpOutputActive(record.position)) continue;
+        const outlet = { x: record.position.x, y: record.position.y + 1, z: record.position.z };
+        if (!this.world.has(outlet)) pumpSources.push(outlet);
+      }
+    }
+    // lastPumpActiveKeys 只由 electric.network.changed 的泵方块键集合维护，
+    // 不在此处改写，否则出口键与泵键口径不一致会导致无谓重算。
+
+    // 阀门适配层（V061-015，不改 WaterSim.ts 规则函数）：
+    // water_valve_open 视为空格 → 水可贯通；water_valve_closed 仍是方块 → 按 V0.5 语义终止传播。
+    const isOpenValve = (blockId: string | undefined): boolean => blockId === "water_valve_open";
     this.target = computeWater(
       {
         world: {
-          hasBlock: (position) => this.world.has(position),
-          blockAt: (position) => this.world.get(position)?.blockId,
+          hasBlock: (position) => {
+            const blockId = this.world.get(position)?.blockId;
+            return blockId !== undefined && !isOpenValve(blockId);
+          },
+          blockAt: (position) => {
+            const blockId = this.world.get(position)?.blockId;
+            return isOpenValve(blockId) ? undefined : blockId;
+          },
         },
-        sources,
+        sources: [...sources, ...pumpSources],
         minY: -32, // WORLD_BOUNDS.minY；避免从坐标模块引入渲染无关耦合
       },
       this.config

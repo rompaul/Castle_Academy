@@ -29,7 +29,7 @@ async function status(page: Page, id: string) {
   );
 }
 
-test("Content Pack 15 个任务：批次 2 六个字段齐全，覆盖 4 个年龄带与全部表达形式（AC-230/231）", async ({ page }) => {
+test("Content Pack 18 个任务：批次 2 六个字段齐全，覆盖 4 个年龄带与全部表达形式（AC-230/231）", async ({ page }) => {
   await boot(page, false);
   const defs = await page.evaluate(() =>
     (window as any).__CASTLE_TEST__.getMissionDefinitions().map((m: any) => ({
@@ -41,9 +41,10 @@ test("Content Pack 15 个任务：批次 2 六个字段齐全，覆盖 4 个年�
       reward: m.reward?.title
     }))
   );
-  expect(defs).toHaveLength(15);
-  expect(defs.slice(9).map((d: { id: string }) => d.id)).toEqual(CROSS_AGE_IDS);
-  for (const def of defs.slice(9)) {
+  expect(defs).toHaveLength(18); // V0.6.1 末尾追加 3 个电力任务（DEV-613 裁定 A）
+  // 切片显式上界 15：保持「批次 2 六个」的原语义，不把追加的电力任务算进批次 2
+  expect(defs.slice(9, 15).map((d: { id: string }) => d.id)).toEqual(CROSS_AGE_IDS);
+  for (const def of defs.slice(9, 15)) {
     expect(def.hintCount).toBeGreaterThanOrEqual(2);
     expect(def.evaluatorId).toMatch(/^evaluator\.[a-z0-9-]+$/);
     expect(def.reward.length).toBeGreaterThan(0);

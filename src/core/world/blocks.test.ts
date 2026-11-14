@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { BLOCKS, type BlockId, getBlockDefinition, ASSET_MANIFEST } from "./blocks";
 
 describe("BLOCKS registry (V0.4.2)", () => {
-  it("contains all registered block IDs (7 original + 15 V0.4.2 + 3 V0.5 water)", () => {
-    expect(BLOCKS.length).toBe(25);
+  it("contains all registered block IDs (7 original + 15 V0.4.2 + 3 V0.5 water + 9 V0.6.1 electrical)", () => {
+    expect(BLOCKS.length).toBe(34);
   });
 
   it("all block IDs are unique", () => {

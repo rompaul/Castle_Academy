@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { WorldState } from "../core/world/WorldState";
 import { BLOCKS, type BlockId } from "../core/world/blocks";
+import { ELECTRICAL_STATE_PAIRS } from "../core/world/electricalBlockState";
 import { WORLD_BOUNDS, type GridPosition, samePosition } from "../core/world/coordinates";
 import { PlayerController } from "../plugins/player-controller/PlayerController";
 import { BuildingPlugin } from "../plugins/building/BuildingPlugin";
@@ -21,8 +22,20 @@ import { buildBlockAtlas, createBlockGeometry, type BlockAtlas } from "./texture
 import type { LayerKind, SectionViewState } from "../plugins/layers/LayerTypes";
 import type { AgeBand } from "../plugins/learner/types";
 import { EventBus } from "../core/events/EventBus";
+import { ElectricalPlugin } from "../plugins/electrical/ElectricalPlugin";
+import {
+  ELECTRICAL_EVENTS,
+  type ElectricalNetworkChangedPayload,
+} from "../plugins/electrical/events";
 
 const BLOCK_SIZE = 1;
+
+/**
+ * V061-012（Q-1 / ADR-0013）：通电导体逐段点亮的 overlay 上限。
+ * 超过时退化为「形状图标 + DOM 状态消息」，避免 draw call 无上界增长。
+ */
+const MAX_ELECTRICAL_OVERLAY_SEGMENTS = 64;
+const ELECTRICAL_LIT_COLOR = 0xe6b44a;
 
 export class ThreeWorldRenderer {
   readonly scene = new THREE.Scene();
@@ -37,6 +50,8 @@ export class ThreeWorldRenderer {
   readonly layerPlugin: LayerPlugin;
   readonly layerRenderAdapter: LayerRenderAdapter;
   readonly waterPlugin: WaterPlugin;
+  /** V0.6.1：通电网络唯一 owner（派生态，不落 WorldState） */
+  readonly electricalPlugin: ElectricalPlugin;
   /** V0.51：档案域 / 任务运行时 / 幂等奖励（CastleQuestPlugin 退役，保留类供 V0.5 单测） */
   readonly learnerProfile: LearnerProfilePlugin;
   readonly reward: RewardPlugin;
@@ -46,6 +61,11 @@ export class ThreeWorldRenderer {
   private lineStart: GridPosition | null = null;
   private fillStart: GridPosition | null = null;
   private readonly unsubscribeLayerEvents = new Array<() => void>();
+  /** V061-012：双态 overlay（每段导体一个共享几何体网格）+ 负载独立材质实例。 */
+  private readonly electricalOverlayMeshes = new Map<string, THREE.Mesh>();
+  private readonly electricalLitMaterials = new Set<THREE.MeshStandardMaterial>();
+  private readonly electricalOverlayGeometry: THREE.BoxGeometry;
+  private readonly electricalOverlayMaterial: THREE.MeshBasicMaterial;
   private readonly geometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
   /** 图集优化（V0.4.3）：每方块一个 UV 映射几何体 + 共享图集材质，draw calls 从 6/块 降到 1/块 */
   private readonly blockGeometries = new Map<BlockId, THREE.BufferGeometry>();
@@ -137,11 +157,17 @@ export class ThreeWorldRenderer {
       this.events.on<WaterFlowUpdatedPayload>("water.flow.updated", (event) => {
         this.waterRenderAdapter.applyDiff(event.payload.added, event.payload.removed);
         this.applySectionView(this.layerPlugin.getSectionView());
+      }),
+      // V0.6.1：电力重算完成后才应用双态 overlay（派生，不写回世界）
+      this.events.on<ElectricalNetworkChangedPayload>(ELECTRICAL_EVENTS.networkChanged, (event) => {
+        this.applyElectricalOverlay(event.payload);
       })
     );
 
     // V0.5 水模拟插件：WorldState 是唯一事实源，水格是 WaterPlugin 的派生状态
     this.waterPlugin = new WaterPlugin(this.world, this.events);
+    // V0.6.1 电力插件：只读窄端口由 composition root 注入水侧，插件之间不互相 import
+    this.electricalPlugin = new ElectricalPlugin(this.world, this.events);
     // V0.51：档案先激活（读取进度），任务运行时通过适配器绑定档案域；旧 quest.* 事件由运行时单点转发
     this.learnerProfile = new LearnerProfilePlugin(this.events);
     this.learnerProfile.activate();
@@ -154,7 +180,9 @@ export class ThreeWorldRenderer {
         blockAt: (position) => this.world.get(position)?.blockId,
         all: () => this.world.all()
       },
-      sectionEnabled: () => this.layerPlugin.getSectionView().enabled
+      sectionEnabled: () => this.layerPlugin.getSectionView().enabled,
+      // V0.6.1（V061-021）：电力只读查询供 3 个确定性评估器使用；派生态不落快照。
+      electrical: () => this.electricalPlugin.getQuery()
     });
     this.waterRenderAdapter = new WaterRenderAdapter(this.layerRenderAdapter, (y) =>
       this.layerPlugin.resolveLayerId(y) ?? this.layerPlugin.getDefaultLayerId() ?? "ground"
@@ -188,6 +216,12 @@ export class ThreeWorldRenderer {
     this.outline = new THREE.LineSegments(outlineGeometry, outlineMaterial);
     this.outline.visible = false;
     this.scene.add(this.outline);
+
+    // V061-012：共享的「点亮线框」几何体与材质（所有通电导体共用，不修改 3 个共享方块材质）。
+    this.electricalOverlayGeometry = new THREE.BoxGeometry(1.04, 1.04, 1.04);
+    this.electricalOverlayMaterial = new THREE.MeshBasicMaterial({
+      color: ELECTRICAL_LIT_COLOR, wireframe: true, transparent: true, opacity: 0.95,
+    });
 
     // 材质策略（atlas 优化）：所有块共享一张图集纹理 + 按透明度分 3 个材质实例；
     // 每块几何体 UV 指向自己在图集中的瓦片。?flat=1（DEV 性能 A/B）仍走纯色路径。
@@ -238,7 +272,10 @@ export class ThreeWorldRenderer {
     this.renderer.domElement.addEventListener("pointerdown", this.onPointerDown);
     this.renderer.domElement.addEventListener("pointermove", this.onPointerMove);
     this.seedWorld();
+    // 泵输出窄端口：水侧只读端口，值由 ElectricalQuery 实时提供；无电力方块时与 V0.6 行为一致。
+    this.waterPlugin.setPumpOutputPort(this.electricalPlugin.getQuery());
     this.waterPlugin.activate();
+    this.electricalPlugin.activate();
     this.missionRuntime.activate();
     if (import.meta.env.DEV) {
       Object.assign(window, {
@@ -267,6 +304,30 @@ export class ThreeWorldRenderer {
             isConverged: this.waterPlugin.getQuery().isConverged(),
             hasWater: (x: number, y: number, z: number) => this.waterPlugin.getQuery().hasWater({ x, y, z }),
           }),
+          getElectrical: () => {
+            const query = this.electricalPlugin.getQuery();
+            return {
+              status: query.getStatus(),
+              isPowered: (x: number, y: number, z: number) => query.isPowered({ x, y, z }),
+              getLoadState: (x: number, y: number, z: number) => query.getLoadState({ x, y, z }),
+              isPumpOutputActive: (x: number, y: number, z: number) =>
+                query.isPumpOutputActive({ x, y, z }),
+              poweredConductors: query.getPoweredConductors().map((position) => [position.x, position.y, position.z]),
+              loadStates: query.getLoadStates().map((entry) => ({
+                position: [entry.position.x, entry.position.y, entry.position.z],
+                state: entry.state,
+              })),
+              recomputeCount: query.getRecomputeCount(),
+              overlaySegments: this.electricalOverlayMeshes.size,
+              litMaterials: this.electricalLitMaterials.size,
+              // DEV-615：同一开关位置的成对观察痕迹（只读、不落盘）
+              switchObservations: query.getSwitchObservations().map((observation) => ({
+                position: [observation.position.x, observation.position.y, observation.position.z],
+                state: observation.state,
+                lampPowered: observation.lampPowered,
+              })),
+            };
+          },
           getQuests: () => this.missionRuntime.getQuests(),
           // —— V0.51 测试钩子（契约 §关键实现提示；只追加，不覆盖 V0.5 既有项）——
           getMissions: () => this.missionRuntime.getMissions(),
@@ -345,6 +406,89 @@ export class ThreeWorldRenderer {
     return this.blockGeometries.get(blockId) ?? this.geometry;
   }
 
+  /**
+   * V061-012 / Q-1：电力双态视觉（派生 overlay，绝不写回 WorldState）。
+   *
+   * - 通电导体：逐段点亮一个共享 wireframe 几何体网格（形状 + 亮度，不只靠颜色）。
+   * - 通电负载：克隆**独立**材质实例并设置 emissive；3 个共享材质本身一个字节不改。
+   * - 每次重算先整体清理再重建，天然可逆；draw call 增量有上限，超限退化为 DOM 状态消息。
+   * - overlay 走既有 layerRenderAdapter / 剖面路径（V061-013），不新增视口或相机改动。
+   */
+  private applyElectricalOverlay(payload: ElectricalNetworkChangedPayload): void {
+    this.clearElectricalOverlay();
+    if (payload.status !== "ok") return; // 降级态一律不点亮
+    if (payload.poweredConductorKeys.length > MAX_ELECTRICAL_OVERLAY_SEGMENTS) {
+      this.onMessage("通路较长，已用状态消息显示通电情况");
+      return;
+    }
+
+    for (const key of payload.poweredConductorKeys) {
+      const blockMesh = this.blockMeshes.get(key);
+      if (!blockMesh) continue;
+      const position = blockMesh.userData.position as GridPosition;
+      const layerId = (blockMesh.userData.layerId as string | undefined) ?? "ground";
+      const overlay = new THREE.Mesh(this.electricalOverlayGeometry, this.electricalOverlayMaterial);
+      overlay.position.copy(blockMesh.position);
+      overlay.castShadow = false;
+      overlay.receiveShadow = false;
+      overlay.userData.kind = "electrical-overlay";
+      overlay.userData.position = position;
+      overlay.userData.layerId = layerId;
+      this.layerRenderAdapter.addMeshToLayer(overlay, layerId);
+      this.applySectionToMesh(overlay);
+      this.electricalOverlayMeshes.set(key, overlay);
+    }
+
+    for (const { position, state } of payload.loadStates) {
+      if (state !== "powered") continue;
+      const blockMesh = this.blockMeshes.get(this.key(position));
+      const blockId = this.world.get(position)?.blockId;
+      if (!blockMesh || !blockId) continue;
+      const base = this.resolveMaterial(blockId);
+      if (!(base instanceof THREE.MeshStandardMaterial)) continue;
+      const lit = base.clone();
+      lit.emissive = new THREE.Color(ELECTRICAL_LIT_COLOR);
+      lit.emissiveIntensity = 0.55;
+      blockMesh.material = lit;
+      this.electricalLitMaterials.add(lit);
+    }
+  }
+
+  /** 清理 overlay、恢复方块共享材质、释放独立材质实例（生命周期 / 重复挂载无增长）。 */
+  private clearElectricalOverlay(): void {
+    for (const overlay of this.electricalOverlayMeshes.values()) {
+      const layerId = overlay.userData.layerId as string | undefined;
+      if (layerId) this.layerRenderAdapter.removeMeshFromLayer(overlay, layerId);
+      else this.scene.remove(overlay);
+    }
+    this.electricalOverlayMeshes.clear();
+    for (const blockMesh of this.blockMeshes.values()) {
+      const position = blockMesh.userData.position as GridPosition;
+      const blockId = this.world.get(position)?.blockId;
+      if (blockId) blockMesh.material = this.resolveMaterial(blockId);
+    }
+    for (const material of this.electricalLitMaterials) material.dispose();
+    this.electricalLitMaterials.clear();
+  }
+
+  /** 存档加载 / reset 后按当前查询结果重建 overlay（mesh 已整体重建）。 */
+  private refreshElectricalOverlay(): void {
+    const query = this.electricalPlugin.getQuery();
+    const poweredConductorKeys = query.getPoweredConductors()
+      .map((position) => this.key(position))
+      .sort();
+    this.applyElectricalOverlay({
+      status: query.getStatus(),
+      reason: null,
+      poweredConductorKeys,
+      pumpActiveKeys: [],
+      loadStates: query.getLoadStates(),
+      stats: query.getStats(),
+      sequence: query.getRecomputeCount(),
+      cause: "refresh",
+    });
+  }
+
   private addBlock(position: GridPosition, blockId: BlockId, castShadow = true): boolean {
     if (!this.building.place(position, blockId)) return false;
     const layerId = this.layerPlugin.resolveLayerId(position.y) ?? this.layerPlugin.getDefaultLayerId() ?? "ground";
@@ -360,6 +504,26 @@ export class ThreeWorldRenderer {
     this.applySectionToMesh(mesh);
     this.blockMeshes.set(this.key(position), mesh);
     return true;
+  }
+
+  /**
+   * V061-021 / DEV-615：「生活中的开关」——注视开关 / 阀门时按一下切换两态。
+   *
+   * 不改 `WorldSnapshot v1`：两态仍是两个 blockId，切换走既有 `remove` + `place`
+   * 公共 API（各发一次事件，由 ElectricalPlugin 合并重算并登记成对观察）。
+   * 绝不与「左键在相邻格放置方块」冲突：那仍然由左键负责，切换用独立按键触发。
+   * 放置失败时恢复原方块，保证世界不会停在「空了一格」的中间态。
+   */
+  toggleFocusedBlock(): boolean {
+    const position = this.targetPosition;
+    if (!position) return false;
+    const current = this.world.get(position);
+    const next = current ? ELECTRICAL_STATE_PAIRS[current.blockId] : undefined;
+    if (!current || !next) return false;
+    if (!this.removeBlock(position)) return false;
+    if (this.addBlock(position, next)) return true;
+    this.addBlock(position, current.blockId);
+    return false;
   }
 
   private removeBlock(position: GridPosition): boolean {
@@ -400,6 +564,8 @@ export class ThreeWorldRenderer {
     this.layerRenderAdapter.applyAllLayerVisibility();
     this.applySectionView(this.layerPlugin.getSectionView());
     this.waterPlugin.refresh(); // 存档加载/蓝图放置后重算水域（水格是派生状态）
+    this.electricalPlugin.refresh(); // 通电态同样从新世界重建，不读档
+    this.refreshElectricalOverlay();
     this.missionRuntime.resetEvaluation(); // 新世界重新判定，但完成态从档案域恢复（D-4）
   }
 
@@ -428,6 +594,10 @@ export class ThreeWorldRenderer {
       if (keep && this.targetPosition && samePosition(position, this.targetPosition)) {
         targetStillValid = true;
       }
+    }
+    // V061-013：电力 overlay 与所属方块走同一套剖面裁切，不额外改视口 / 相机。
+    for (const overlay of this.electricalOverlayMeshes.values()) {
+      this.applySectionViewSingle(overlay, section);
     }
     // 水格同样服从剖面裁切（非破坏性视图，不修改数据）
     this.waterRenderAdapter.forEachMesh((mesh) => {
@@ -649,6 +819,8 @@ export class ThreeWorldRenderer {
     this.outline.visible = false;
     this.seedWorld();
     this.waterPlugin.activate();
+    this.electricalPlugin.refresh();
+    this.refreshElectricalOverlay();
     this.missionRuntime.resetEvaluation();
     this.waterPlugin.refresh();
     this.player.reset();
@@ -664,6 +836,10 @@ export class ThreeWorldRenderer {
     this.renderer.domElement.removeEventListener("pointermove", this.onPointerMove);
     this.player.dispose();
     this.waterPlugin.dispose();
+    this.electricalPlugin.dispose();
+    this.clearElectricalOverlay();
+    this.electricalOverlayGeometry.dispose();
+    this.electricalOverlayMaterial.dispose();
     this.missionRuntime.dispose();
     this.learnerProfile.dispose();
     this.waterRenderAdapter.dispose();

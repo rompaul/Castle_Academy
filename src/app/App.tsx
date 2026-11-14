@@ -2,8 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Home, ArrowDown, ArrowRight, ArrowUp, ArrowLeft } from "lucide-react";
 import { GameCanvas } from "../rendering/GameCanvas";
 import type { GameActions } from "../rendering/GameCanvas";
-import { BLOCKS, type BlockId } from "../core/world/blocks";
+import { type BlockId } from "../core/world/blocks";
+import {
+  assignToSlot, DEFAULT_QUICK_SLOTS, QUICK_SLOT_COUNT,
+} from "../core/world/blockCategories";
 import { Hotbar } from "../ui/Hotbar";
+import { BlockPalette } from "../ui/BlockPalette";
 import { HelpPanel } from "../ui/HelpPanel";
 import type { SectionViewState } from "../plugins/layers/LayerTypes";
 import {
@@ -14,6 +18,10 @@ import { MissionExperience } from "../ui/mission/MissionExperience";
 
 export function App() {
   const [selectedBlock, setSelectedBlock] = useState<BlockId>("grass");
+  // DDR-0002：MC 式快捷格。只在运行时内存中，绝不写进任何持久化存储。
+  const [quickSlots, setQuickSlots] = useState<readonly BlockId[]>(DEFAULT_QUICK_SLOTS);
+  const [activeSlot, setActiveSlot] = useState(0);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [helpOpen, setHelpOpen] = useState(true);
   const [message, setMessage] = useState("Your building world is ready.");
@@ -93,6 +101,18 @@ export function App() {
     toastTimerRef.current = window.setTimeout(() => setMessage((current) => current === text ? "" : current), 2600);
   }, []);
 
+  // DDR-0002：点快捷格 = 切格 + 选中该格方块
+  const selectSlot = (index: number) => {
+    setActiveSlot(index);
+    setSelectedBlock(quickSlots[index]);
+  };
+
+  // DDR-0002：在分类面板点方块 = 放进当前格并立即选中（纯函数保证 9 格互不重复）
+  const assignBlock = (id: BlockId) => {
+    setQuickSlots((current) => assignToSlot(current, activeSlot, id));
+    setSelectedBlock(id);
+  };
+
   // 城堡水务任务（V0.5）：订阅任务事件驱动面板与完成 toast
   const [quests, setQuests] = useState<QuestState[]>([]);
   // 悬停水信息（Scope 成果 7）：渲染器 raycast 后回传状态文本
@@ -122,9 +142,24 @@ export function App() {
   useEffect(() => {
     const toolOrder: Array<"place" | "line" | "fill"> = ["place", "line", "fill"];
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setPlaying(false);
+      if (event.key === "Escape") {
+        setPlaying(false);
+        setPaletteOpen(false);
+      }
+      // DDR-0002：数字键 1–9 切快捷格；默认 9 格仍为 BLOCKS[0..8]，V0.5 基线语义不变。
       const index = Number(event.key) - 1;
-      if (index >= 0 && index < BLOCKS.length) setSelectedBlock(BLOCKS[index].id);
+      if (index >= 0 && index < QUICK_SLOT_COUNT) {
+        setActiveSlot(index);
+        setSelectedBlock(quickSlots[index]);
+      }
+      const target = event.target as HTMLElement | null;
+      const typing = !!target && (
+        target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable
+      );
+      // E 打开 / 关闭「所有方块」分类面板（MC 式物品栏入口）
+      if (event.key.toLowerCase() === "e" && !event.repeat && !typing) {
+        setPaletteOpen((open) => !open);
+      }
       if (event.key === "Tab") {
         event.preventDefault();
         const current = toolOrder.indexOf(buildingTool);
@@ -134,10 +169,29 @@ export function App() {
         if (bt) bt.setTool(next);
         showMessage(`Building tool: ${next}`);
       }
+      // DEV-615：注视开关 / 阀门时按 F 切换开合，像按生活中的开关一样。
+      // 不占用左键（相邻格放置）与右键（拆除），V0.5 基线键位零变化。
+      if (event.key.toLowerCase() === "f" && !event.repeat) {
+        const toggled = gameRef.current?.toggleFocusedBlock() ?? false;
+        showMessage(toggled ? "Switch: pressed." : "Look at a switch or valve, then press F.");
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [buildingTool, gameRef]);
+  }, [buildingTool, gameRef, quickSlots]);
+
+  // DDR-0002：滚轮切快捷格；分类面板打开时不抢占面板自身的滚动。
+  useEffect(() => {
+    const onWheel = (event: WheelEvent) => {
+      if (paletteOpen || event.deltaY === 0) return;
+      const step = event.deltaY > 0 ? 1 : -1;
+      const next = (activeSlot + step + QUICK_SLOT_COUNT) % QUICK_SLOT_COUNT;
+      setActiveSlot(next);
+      setSelectedBlock(quickSlots[next]);
+    };
+    window.addEventListener("wheel", onWheel, { passive: true });
+    return () => window.removeEventListener("wheel", onWheel);
+  }, [activeSlot, quickSlots, paletteOpen]);
 
   return (
     <main className="app-shell">
@@ -150,7 +204,7 @@ export function App() {
           </div>
         </div>
         <div className="topbar-right">
-          <span className="version-pill">V0.6.0</span>
+          <span className="version-pill">V0.6.1</span>
           <button className="subtle-button" onClick={() => setLayerPanelOpen((v) => !v)}>
             {layerPanelOpen ? "Hide layers" : "Layers"}
           </button>
@@ -403,9 +457,25 @@ export function App() {
 
         {message && <div className="toast">{message}</div>}
 
+        {paletteOpen && (
+          <BlockPalette
+            activeSlot={activeSlot}
+            assigned={quickSlots}
+            onAssign={assignBlock}
+            onClose={() => setPaletteOpen(false)}
+          />
+        )}
+
         <div className="bottom-hud">
           <div className="hud-caption">SELECT A MATERIAL</div>
-          <Hotbar selected={selectedBlock} onSelect={setSelectedBlock} />
+          <Hotbar
+            slots={quickSlots}
+            activeSlot={activeSlot}
+            selected={selectedBlock}
+            onSelectSlot={selectSlot}
+            onTogglePalette={() => setPaletteOpen((open) => !open)}
+            paletteOpen={paletteOpen}
+          />
           <div className="hud-tip">LEFT CLICK · PLACE <span>│</span> RIGHT CLICK · REMOVE</div>
         </div>
       </section>
@@ -414,7 +484,7 @@ export function App() {
       <MissionExperience gameRef={gameRef} />
 
       <footer className="footer">
-        <span>CASTLE ACADEMY <b>V0.6.0</b></span>
+        <span>CASTLE ACADEMY <b>V0.6.1</b></span>
         <span>BUILD FIRST. SIMULATE NEXT. LEARN THROUGH BUILDING.</span>
         <span>LOCAL CREATIVE WORLD</span>
       </footer>

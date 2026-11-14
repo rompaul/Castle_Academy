@@ -3,7 +3,10 @@ import type { MutableRefObject } from "react";
 
 import type { GameActions } from "../../rendering/GameCanvas";
 import type { MissionSummary } from "../../content/missions/types";
-import { getMissionById } from "../../content/missions";
+import { getMissionById, ELECTRICAL_MISSIONS } from "../../content/missions";
+import { deriveElectricalStatus } from "../../content/electrical/status";
+import type { ElectricalStatusKey } from "../../content/electrical/glossary";
+import { ELECTRICAL_EVENTS, type ElectricalNetworkChangedPayload } from "../../plugins/electrical/events";
 import type { LearnerProfile } from "../../plugins/learner/types";
 import {
   MISSION_EVENTS,
@@ -14,9 +17,17 @@ import { LEARNER_EVENTS, type LearnerProfileRecoveredPayload } from "../../plugi
 import { MissionSidebar } from "./MissionSidebar";
 import { MissionDetailPanel } from "./MissionDetailPanel";
 import { EvidenceRecordPanel } from "./EvidenceRecordPanel";
+import { ElectricalStatusBar } from "./ElectricalStatusBar";
+import { ElectricalSafetyGuide } from "./ElectricalSafetyGuide";
 import { RewardReveal, type RewardView } from "./RewardReveal";
 import { OnboardingFlow, type OnboardingMode } from "./OnboardingFlow";
 import type { AgeBand } from "../../plugins/learner/types";
+
+/**
+ * V061-022：首次引导只在**会话内**显示一次，用模块级标记而非新的 localStorage key
+ * （AC-6760：localStorage 仍为 3 个 key）。刷新后重新显示是保守的安全设计。
+ */
+let safetyGuideShownThisSession = false;
 
 interface Props {
   gameRef: MutableRefObject<GameActions | null>;
@@ -47,6 +58,9 @@ export function MissionExperience({ gameRef }: Props) {
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   /** V06-020（K6）：迁移/容错提示已读（非模态卡片，不再阻挡交互） */
   const [noticeDismissed, setNoticeDismissed] = useState(false);
+  /** V061-023：电力状态消息（干净世界为 null）；V061-022：首次安全引导 */
+  const [electricalStatus, setElectricalStatus] = useState<ElectricalStatusKey | null>(null);
+  const [safetyGuideOpen, setSafetyGuideOpen] = useState(false);
   const closeTimer = useRef<number | null>(null);
 
   const open = pinned || hovered || explicitOpen;
@@ -94,6 +108,8 @@ export function MissionExperience({ gameRef }: Props) {
       if (pending) setNotice(pending);
       // 首屏：无档案 → 创建引导；已有档案 → 档案选择页（可跳过直进自由建造）
       setOnboardingMode(game.getActiveProfile() ? "profiles" : "nickname");
+      // 插件激活早于 UI 订阅：初始化时补读一次电力状态（干净世界为 null）
+      setElectricalStatus(game.getElectricalStatus());
       const onProfileReady = () => {
         sync();
         setOnboardingMode("none");
@@ -126,6 +142,13 @@ export function MissionExperience({ gameRef }: Props) {
             learned: definition.learningGoal,
             rewardTitle: e.payload.reward.title
           }]);
+        }),
+        // V061-023：电力重算完成后派生单一状态消息（6 类互斥，图标 + 文字）
+        game.events.on<ElectricalNetworkChangedPayload>(ELECTRICAL_EVENTS.networkChanged, (e) => {
+          setElectricalStatus(deriveElectricalStatus({
+            loadStates: e.payload.loadStates,
+            blocks: game.world.all()
+          }));
         })
       ];
       setReady(true);
@@ -171,6 +194,11 @@ export function MissionExperience({ gameRef }: Props) {
     setSelectedId(missionId);
     setDetailOpen(true);
     setOnboardingMode("none"); // 开始玩任务后不再显示引导卡片
+    // V061-022：首次进入电力内容时显示一次安全引导（会话内一次，不写任何存储）
+    if (!safetyGuideShownThisSession && ELECTRICAL_MISSIONS.some((m) => m.id === missionId)) {
+      safetyGuideShownThisSession = true;
+      setSafetyGuideOpen(true);
+    }
   };
 
   const useHint = (missionId: string) => {
@@ -246,6 +274,7 @@ export function MissionExperience({ gameRef }: Props) {
           onSubmitEvidence={(text) =>
             gameRef.current?.submitTextEvidence(selectedDefinition.id, text) ?? false
           }
+          ageBand={profile?.ageBand}
         />
       )}
 
@@ -296,6 +325,12 @@ export function MissionExperience({ gameRef }: Props) {
             </button>
           </div>
         </div>
+      )}
+
+      {/* V061-023：状态消息条只在含电力方块时显示，干净世界 HUD 零变化 */}
+      <ElectricalStatusBar status={electricalStatus} />
+      {safetyGuideOpen && (
+        <ElectricalSafetyGuide onDismiss={() => setSafetyGuideOpen(false)} />
       )}
     </div>
   );

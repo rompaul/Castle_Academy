@@ -42,13 +42,15 @@ export class CapabilityRegistry {
   }
 }
 
-/** V0.51 已开放的 4 项能力；`pipe.diagnostics` 等未注册能力即"暂不可玩"素材。 */
+/** V0.51 已开放的 4 项能力 + V0.6.1 电力基础能力；`pipe.diagnostics` 等未注册能力即"暂不可玩"素材。 */
 export function createV051Capabilities(): CapabilityRegistry {
   const registry = new CapabilityRegistry();
   registry.register("building.basic", () => true);
   registry.register("water.simulation", () => true);
   registry.register("layers.section", () => true);
   registry.register("measurement.distance", () => true);
+  // V061-017（AC-6748）：电力任务 requiredCapabilities 引用，未注册即"暂不可玩"。
+  registry.register("electric.basic", () => true);
   return registry;
 }
 

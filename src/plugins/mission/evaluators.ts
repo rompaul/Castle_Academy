@@ -10,8 +10,10 @@
  */
 import type { GridPosition } from "../../core/world/coordinates";
 import type { WaterQuery } from "../water/WaterPlugin";
+import type { ElectricalQuery } from "../electrical/query";
 import { MOAT_FLOOR_CELLS, WELL_SHAFT_CELLS, DUNGEON_DRY_CELLS } from "../learning/castleStage";
 import { registerExtendedEvaluators } from "./extendedEvaluators";
+import { registerElectricalEvaluators } from "./electricalEvaluators";
 
 /* ==================== 以下为 V0.5 原样迁移（勿改写） ==================== */
 
@@ -146,6 +148,8 @@ export interface EvaluatorQuery {
   textEvidence?: ReadonlyMap<string, string>;
   /** 新增：剖面视图是否开启（剖面侦探） */
   sectionEnabled?: boolean;
+  /** V0.6.1（V061-021）：电力只读查询；未注入时电力评估器降级为 0 进度，便于单测 */
+  electrical?: ElectricalQuery;
 }
 
 export interface EvaluatorResult {
@@ -232,6 +236,8 @@ export function createDefaultEvaluatorRegistry(): EvaluatorRegistry {
   }
   // V51-015/016 新增批次：判定仍为纯函数，与 V0.5 迁移判定彼此独立。
   registerExtendedEvaluators(registry);
+  // V0.6.1（V061-021）：3 个电力评估器，仍是同一个注册表、同样的纯函数契约。
+  registerElectricalEvaluators(registry);
   return registry;
 }
 

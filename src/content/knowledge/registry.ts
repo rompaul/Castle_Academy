@@ -7,7 +7,8 @@
  * ADR-0008 建议正则的 4 段限制与其批准 ID 矛盾，实现期按 ADR「正则实现期冻结」条款定案）。
  *
  * 不可变性：ID 发布后只能追加或标 deprecated，不重命名、不删除（ADR-0008 决策 6）。
- * `kp.electric.*` 本版仅预留前缀，不注册具体点（ADR-0008 决策 3）。
+ * V0.6 预留 `kp.electric.*` 前缀；V0.6.1（V061-017）按 Q-3 批准范围**只追加** 5 个具体点，
+ * 既有 19 个 ID 与顺序逐字不变（19 → 24）。
  * 儿童可见字段（label/summary）不含等级、难度、年级或掌握状态词（ADR-0008 决策 7）。
  */
 
@@ -35,7 +36,7 @@ export interface KnowledgePointDefinition {
 export const KNOWLEDGE_POINT_ID_PATTERN =
   /^kp\.[a-z][a-z0-9_-]*(\.[a-z][a-z0-9_-]*){1,2}$/;
 
-/** 本版预留、不注册的领域前缀（V0.6.1 电力直接引用，避免届时重命名） */
+/** 历史预留前缀（V0.6 起草时未注册具体点；V0.6.1 已追加注册，常量保留供下游查询兼容） */
 export const RESERVED_KNOWLEDGE_POINT_DOMAIN_PREFIXES: readonly string[] = [
   'kp.electric.',
 ];
@@ -213,6 +214,52 @@ export const KNOWLEDGE_POINTS: readonly KnowledgePointDefinition[] = [
     summary: '把自己的想法和为什么这样做讲给别人听。',
     domain: 'communication',
     concept: 'explain_reason',
+    aspect: '',
+    status: 'active',
+  },
+  /* ---------- V0.6.1 / V061-017：只追加，不重命名、不插入既有 19 个之前 ---------- */
+  {
+    id: 'kp.electric.circuit.closed',
+    label: '路连起来才通',
+    summary: '电要从电源一路连到灯，中间断一格就到不了。',
+    domain: 'electric',
+    concept: 'circuit',
+    aspect: 'closed',
+    status: 'active',
+  },
+  {
+    id: 'kp.electric.switch.effect',
+    label: '开关让电停下',
+    summary: '开关合上，电就能走过去；开关断开，电就停在这里。',
+    domain: 'electric',
+    concept: 'switch',
+    aspect: 'effect',
+    status: 'active',
+  },
+  {
+    id: 'kp.electric.load.pump',
+    label: '水泵要通电',
+    summary: '水泵是电的一个用处：它通上电，才会把水送出去。',
+    domain: 'electric',
+    concept: 'load',
+    aspect: 'pump',
+    status: 'active',
+  },
+  {
+    id: 'kp.system.dependency',
+    label: '一步接着一步',
+    summary: '有些事要前面一步成了，后面一步才会发生。',
+    domain: 'system',
+    concept: 'dependency',
+    aspect: '',
+    status: 'active',
+  },
+  {
+    id: 'kp.causality.switch_effect',
+    label: '按一下会变',
+    summary: '拨一下开关，灯就从灭变亮；再拨一下，又变回去。',
+    domain: 'causality',
+    concept: 'switch_effect',
     aspect: '',
     status: 'active',
   },

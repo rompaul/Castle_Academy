@@ -278,3 +278,102 @@
 @media (prefers-reduced-motion: reduce) {
   .ca-notice-card, .ca-evidence-panel, .ca-kp-skeleton { animation: none; }
 }
+
+/* ---------- V0.6.1：电力状态消息 / 安全引导 / 常驻安全条目（只用 tokens.css） ---------- */
+.ca-electrical-status {
+  position: fixed; left: var(--ca-space-5); bottom: var(--ca-space-6); z-index: 45;
+  display: inline-flex; align-items: center; gap: var(--ca-space-2);
+  padding: var(--ca-space-2) var(--ca-space-4);
+  background: var(--ca-surface-white); color: var(--ca-navy-900);
+  border: 1.5px solid var(--ca-teal-600); border-radius: var(--ca-radius-pill);
+  box-shadow: var(--ca-shadow-panel); font-size: var(--ca-text-md); font-weight: 600;
+}
+.ca-electrical-status-icon { color: var(--ca-teal-600); font-size: var(--ca-text-lg); line-height: 1; }
+.ca-electrical-status-label { line-height: 1.4; }
+
+.ca-safety-guide {
+  position: fixed; right: var(--ca-space-5); bottom: calc(var(--ca-space-6) * 4);
+  width: min(360px, calc(100vw - 32px)); z-index: 65; pointer-events: none;
+}
+.ca-safety-guide-card {
+  pointer-events: auto; display: flex; flex-direction: column; gap: var(--ca-space-3);
+  background: var(--ca-surface-white); color: var(--ca-navy-900);
+  border: 1.5px solid var(--ca-navy-900); border-left: 8px solid var(--ca-teal-600);
+  border-radius: var(--ca-radius-lg); padding: var(--ca-space-4);
+  box-shadow: var(--ca-shadow-panel);
+}
+.ca-safety-guide-title { font-size: var(--ca-text-lg); font-weight: 700; }
+.ca-safety-guide-text { margin: 0; color: var(--ca-slate-600); font-size: var(--ca-text-md); line-height: 1.7; }
+.ca-safety-guide-card .ca-btn { align-self: flex-end; }
+
+.ca-safety-note {
+  display: flex; flex-direction: column; gap: var(--ca-space-1);
+  padding: var(--ca-space-3); border-radius: var(--ca-radius-md);
+  background: var(--ca-surface-muted); margin-top: var(--ca-space-2);
+}
+.ca-safety-note .ca-note { margin: 0; }
+
+/* 帮助面板（存量深色 HUD）内的常驻安全条目：文字用浅色 token，形状 + 文字并置 */
+.ca-help-safety {
+  display: flex; align-items: flex-start; gap: var(--ca-space-2);
+  margin-top: var(--ca-space-3); padding-top: var(--ca-space-3);
+  border-top: 1px solid var(--ca-border-soft);
+  color: var(--ca-cream-050); font-size: var(--ca-text-sm); line-height: 1.6;
+}
+.ca-help-safety-icon { color: var(--ca-gold-500); line-height: 1.4; }
+
+/* DEV-616：低龄活动 C 的单系统子路径切换；纯 token，无硬编码颜色 */
+.ca-low-age-paths {
+  display: flex; flex-wrap: wrap; gap: var(--ca-space-2);
+  margin: 0 0 var(--ca-space-3);
+}
+.ca-low-age-paths .ca-btn { min-height: 32px; }
+
+/* ---------- DDR-0002：MC 式方块栏（9 快捷格 + 分类面板） ----------
+   纯 token，新增硬编码颜色 0 处；不改 styles.css 存量 HUD 规则。 */
+.hotbar-palette-toggle {
+  display: grid; place-items: center;
+  color: var(--ca-cream-050); font-size: var(--ca-text-lg);
+}
+.hotbar-palette-icon { line-height: 1; }
+.block-palette {
+  position: absolute; left: 50%; bottom: 104px; transform: translateX(-50%);
+  width: min(680px, calc(100vw - 32px)); max-height: min(46vh, 360px);
+  overflow-y: auto; z-index: 40;
+  padding: var(--ca-space-4);
+  background: var(--ca-surface-white); color: var(--ca-navy-900);
+  border: 1px solid var(--ca-border-soft); border-radius: var(--ca-radius-md);
+  box-shadow: var(--ca-shadow-panel);
+  font-family: var(--ca-font-body); font-size: var(--ca-text-sm);
+}
+.block-palette-head {
+  display: flex; align-items: center; gap: var(--ca-space-3);
+  margin-bottom: var(--ca-space-3);
+}
+.block-palette-title { font-size: var(--ca-text-md); font-weight: 700; }
+.block-palette-hint { color: var(--ca-slate-600); }
+.block-palette-close {
+  margin-left: auto; padding: 0 var(--ca-space-2); cursor: pointer;
+  color: var(--ca-navy-900); background: var(--ca-surface-muted);
+  border: 1px solid var(--ca-border-soft); border-radius: var(--ca-radius-sm);
+}
+.block-palette-group { margin-bottom: var(--ca-space-3); }
+.block-palette-group-label {
+  margin-bottom: var(--ca-space-2); color: var(--ca-teal-600); font-weight: 700;
+}
+.block-palette-grid { display: flex; flex-wrap: wrap; gap: var(--ca-space-2); }
+.block-palette-item {
+  position: relative; display: flex; align-items: center; gap: var(--ca-space-2);
+  min-width: 108px; padding: var(--ca-space-2); text-align: left; cursor: pointer;
+  color: var(--ca-navy-900); background: var(--ca-surface-muted);
+  border: 1px solid var(--ca-border-soft); border-radius: var(--ca-radius-sm);
+  font-size: var(--ca-text-sm);
+}
+.block-palette-item:hover { border-color: var(--ca-teal-600); }
+.block-palette-item.in-quickbar {
+  background: var(--ca-teal-100); border-color: var(--ca-teal-600);
+}
+.block-palette-item .block-swatch { flex: 0 0 auto; width: 18px; height: 18px; }
+.block-palette-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.block-palette-item-slot { margin-left: auto; color: var(--ca-teal-600); font-weight: 700; }
+.block-palette button:focus-visible { outline: 2px solid var(--ca-teal-600); outline-offset: 2px; }

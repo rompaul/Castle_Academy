@@ -50,9 +50,9 @@ describe('知识点 ID 正则（冻结）', () => {
 });
 
 describe('Registry 数据完整性', () => {
-  it('注册了 19 个唯一 ID（映射表去重后实际数量）', () => {
+  it('注册了 24 个唯一 ID（V0.6 的 19 个 + V0.6.1 追加 5 个）', () => {
     expect(new Set(KNOWLEDGE_POINTS.map((kp) => kp.id)).size).toBe(KNOWLEDGE_POINTS.length);
-    expect(KNOWLEDGE_POINTS.length).toBe(19);
+    expect(KNOWLEDGE_POINTS.length).toBe(24);
   });
 
   it('全部条目通过结构化校验', () => {
@@ -83,14 +83,17 @@ describe('Registry 数据完整性', () => {
     }
   });
 
-  it('kp.electric.* 仅预留、未注册具体点', () => {
-    expect(KNOWLEDGE_POINTS.some((kp) => kp.id.startsWith('kp.electric.'))).toBe(false);
+  it('kp.electric.* 在 V0.6.1 已注册具体点；历史预留前缀表与查询函数保持兼容', () => {
+    // V0.6 时本断言为「仅预留、未注册」；Q-3 批准范围落地后改为「已注册」，
+    // 命名空间约束（前缀表 / 查询函数 / 已注册集合）一条不删。
+    expect(KNOWLEDGE_POINTS.some((kp) => kp.id.startsWith('kp.electric.'))).toBe(true);
+    expect(isRegisteredKnowledgePoint('kp.electric.circuit.closed')).toBe(true);
     expect(isReservedKnowledgePointPrefix('kp.electric.circuit.closed')).toBe(true);
     expect(RESERVED_KNOWLEDGE_POINT_DOMAIN_PREFIXES).toContain('kp.electric.');
     expect(isReservedKnowledgePointPrefix('kp.water.flow.range')).toBe(false);
   });
 
-  it('涵盖全部 15 个任务引用所需的 19 个 ID', () => {
+  it('涵盖 V0.51 的 15 个任务引用所需的 19 个 ID', () => {
     const ids = new Set(KNOWLEDGE_POINTS.map((kp) => kp.id));
     // 每个任务的引用清单（映射表 §4）
     const required = [
@@ -117,7 +120,8 @@ describe('查询与引用约束', () => {
 
   it('isRegisteredKnowledgePoint 只认已注册 ID', () => {
     expect(isRegisteredKnowledgePoint('kp.measurement.counting')).toBe(true);
-    expect(isRegisteredKnowledgePoint('kp.electric.circuit.closed')).toBe(false);
+    expect(isRegisteredKnowledgePoint('kp.electric.circuit.closed')).toBe(true);
+    expect(isRegisteredKnowledgePoint('kp.electric.not.registered')).toBe(false);
     expect(isRegisteredKnowledgePoint('kp.not.registered')).toBe(false);
   });
 });

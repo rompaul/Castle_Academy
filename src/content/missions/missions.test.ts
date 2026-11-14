@@ -141,9 +141,15 @@ describe("V06-006 schema v2 双模校验（ADR-0009）", () => {
     if (!badResult.ok) expect(badResult.errors.join()).toContain("未注册");
   });
 
-  it("预留前缀 kp.electric.* 未注册同样被拒（本版不注册电力点）", () => {
-    const bad = { ...base, schemaVersion: 2, knowledgePointIds: ["kp.electric.circuit.closed"] };
-    expect(validateMissionDefinition(bad).ok).toBe(false);
+  it("V0.6.1 已注册的 kp.electric.* 被接受，未注册的电力点仍被拒", () => {
+    // V0.6 时该用例断言「预留前缀全部被拒」；V061-017 按 Q-3 追加注册后，
+    // 双模校验语义不变：只接受已注册 ID，未注册一律拒绝。
+    const good = { ...base, schemaVersion: 2, knowledgePointIds: ["kp.electric.circuit.closed"] };
+    expect(validateMissionDefinition(good).ok).toBe(true);
+    const bad = { ...base, schemaVersion: 2, knowledgePointIds: ["kp.electric.not.registered"] };
+    const badResult = validateMissionDefinition(bad);
+    expect(badResult.ok).toBe(false);
+    if (!badResult.ok) expect(badResult.errors.join()).toContain("未注册");
   });
 
   it("非法 schemaVersion 被拒", () => {

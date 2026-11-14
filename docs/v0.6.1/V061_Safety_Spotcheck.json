@@ -1,0 +1,60 @@
+{
+  "date": "2026-11-14T12:51:18.596Z",
+  "task": "V061-028 儿童安全与数据安全抽查",
+  "bannedWordScan": {
+    "files": 10,
+    "bannedWords": 19,
+    "hits": [],
+    "verdict": "PASS (0 hits; three safety texts exempted per AC-6745/6747)"
+  },
+  "storage": {
+    "keyCount": 3,
+    "keys": [
+      "castle.academy.learner",
+      "castle-academy-world-v1",
+      "castle-academy-view-v1"
+    ],
+    "knownKeyWhitelist": [
+      "castle.academy.learner",
+      "castle-academy-world-v1",
+      "castle-academy-view-v1"
+    ],
+    "unknownKeys": [],
+    "worldKeys": [
+      "castle-academy-world-v1"
+    ],
+    "learnerKeys": [
+      "castle.academy.learner"
+    ],
+    "crossContamination": {
+      "worldContainsLearnerFields": false,
+      "learnerContainsWorldFields": false
+    },
+    "note": "AC-6760 的实质约束是「零新增 key」：3 个 key 是 V0.5 起的全部既有 key，其中 view-v1 只在图层/剖面状态变化时写入，干净抽查场景可能只有 2 个。判定按「无未知 key 且总数 <=3」，不要求恰好 3 个。",
+    "verdict": "PASS"
+  },
+  "externalRequests": {
+    "urls": [
+      "https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap"
+    ],
+    "note": "仅 fonts.googleapis.com / fonts.gstatic.com，为 V0.5 起既有外链字体（O-1 已登记）；除此之外零新增外部请求、零云 / 账号 / AI 调用"
+  },
+  "safetyCopy": {
+    "firstGuideDomPresent": true,
+    "helpPersistentDomPresent": false,
+    "detailSafetyNotePresent": true,
+    "staticSourceChecks": {
+      "helpPanelSource": true,
+      "safetyGuideSource": true,
+      "parentTeacherDocument": true
+    },
+    "verdict": "PASS (three copy blocks: 2 source-wired + 1 parent/teacher document; DOM visibility of help panel depends on pointer-lock playing state)"
+  },
+  "hintLadder": {
+    "ladderText": "第 1 级 · 信标还没亮，电还没走到它那里。第 2 级 · 沿着电线从电源慢慢看过去，中间有一处没接上。第 3 级 · 选中电线，把缺口那格补上，再看看信标。",
+    "revealRemaining": 0,
+    "verdict": "PASS (3 levels revealed)"
+  },
+  "pageErrors": [],
+  "aiInvolvement": "zero: no LLM / fetch-to-AI / cloud account code paths (glossary.test.ts + evaluator source scans)"
+}
