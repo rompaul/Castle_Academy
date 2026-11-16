@@ -1,0 +1,113 @@
+{
+  "url": "http://127.0.0.1:5173",
+  "screenshotCount": 15,
+  "screenshots": [
+    "v07-clean-world",
+    "v07-s1-mission-sidebar",
+    "v07-s2-six-forms",
+    "v07-s11-locked",
+    "v07-s3-observation-list",
+    "v07-s4-variable-compare",
+    "v07-s5-hypothesis",
+    "v07-s6-decision",
+    "v07-s7-local-explanation",
+    "v07-s8-reflection",
+    "v07-s9-evidence-panel",
+    "v07-s10-hints",
+    "v07-s14-mastery-evidence",
+    "v07-s12-hud-unchanged",
+    "v07-s13-empty-skip"
+  ],
+  "pageErrors": [],
+  "stepFailures": [],
+  "diagnostics": {
+    "totalMissions": 24,
+    "forms": [
+      "communication",
+      "creation",
+      "experiment",
+      "exploration",
+      "life-simulation",
+      "problem-solving"
+    ],
+    "v07": [
+      {
+        "id": "mission.find-the-pattern.v1",
+        "title": "水在哪里出现",
+        "form": "exploration",
+        "ageScope": "6-7",
+        "hintCount": 3
+      },
+      {
+        "id": "mission.switch-compare.v1",
+        "title": "同一个开关，按两下",
+        "form": "experiment",
+        "ageScope": "8-10",
+        "hintCount": 3
+      },
+      {
+        "id": "mission.why-no-water-here.v1",
+        "title": "花园为什么没水",
+        "form": "problem-solving",
+        "ageScope": "8-10",
+        "hintCount": 3
+      },
+      {
+        "id": "mission.choose-water-route.v1",
+        "title": "给城堡选一条水路",
+        "form": "life-simulation",
+        "ageScope": "11-12",
+        "hintCount": 3
+      },
+      {
+        "id": "mission.explain-my-choice.v1",
+        "title": "把我的理由说清楚",
+        "form": "communication",
+        "ageScope": "13-15",
+        "hintCount": 3
+      },
+      {
+        "id": "mission.story-map.v1",
+        "title": "城堡里的一天",
+        "form": "creation",
+        "ageScope": "6-7",
+        "hintCount": 3
+      }
+    ],
+    "reflectionInputPresent": true,
+    "localEvidencePresent": true,
+    "contrast": [
+      {
+        "selector": ".ca-v07-label",
+        "fg": "rgb(71, 85, 105)",
+        "bg": "rgb(255, 255, 255)",
+        "ratio": 7.58
+      },
+      {
+        "selector": ".ca-v07-empty",
+        "fg": "rgb(71, 85, 105)",
+        "bg": "rgb(255, 255, 255)",
+        "ratio": 7.58
+      },
+      {
+        "selector": ".ca-v07-pair-state",
+        "fg": "rgb(30, 42, 58)",
+        "bg": "rgb(255, 255, 255)",
+        "ratio": 14.51
+      },
+      {
+        "selector": ".ca-v07-chip",
+        "fg": "rgb(15, 118, 110)",
+        "bg": "rgb(255, 255, 255)",
+        "ratio": 5.47
+      },
+      {
+        "selector": ".ca-v07-list",
+        "fg": "rgb(30, 42, 58)",
+        "bg": "rgb(255, 255, 255)",
+        "ratio": 14.51
+      }
+    ],
+    "detailText": "水在哪里出现背景带上小本子，在城堡里找一找：水会出现在哪些地方？目标目标：记下三处不同的地方，看看水都在哪里出现进度已完成已完成提示（用了不扣分，可先看别的思路） 看一条提示已看 0/3 级 · 本任务累计使用 0 次提示（不扣分）这个任务会用到水流范围 · 水从高处往低处流，流动的范围是有限的。原因和结果 · 一件事发生了，会带来另一件事的变化。换个思路 · 说说你的做法这三处有什么一样的地方？想说一句也可以，不写也没关系。记下我看到 · 3/3 处水源旁边 · 已记下水沟尽头 · 已记下护城河边 · 已记下记下的是地方，不用写句子；想说一句也可以写在下面。说一说（可以不写）记下我的想法不写也没关系，不影响任务。只在这次游戏里保留，读档、刷新或关掉就没了；不会保存、不会打分、不会上传。看看我留下了什么（给大人看）记下的观察：3 条两态对照：0 条做过的选择：2 条我说的话：还没写我的解释：还没写这里只是给你和大人回看，系统不判断写得好不好。 继续自由建造收起"
+  }
+}
