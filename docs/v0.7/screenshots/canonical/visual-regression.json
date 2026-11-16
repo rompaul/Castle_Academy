@@ -1,0 +1,86 @@
+{
+  "date": "2026-11-16T04:17:45.100Z",
+  "task": "V07-024",
+  "baseline": {
+    "anchor": "docs/v0.6/screenshots/canonical/world-canvas-anchor-v060.png",
+    "main": "docs/v0.6.1/screenshots/canonical/world-main-v061.png",
+    "version": "tag v0.6.1 / f0980b8 (anchor source: tag v0.6.0 / 0bd6e4f)"
+  },
+  "frozen": [
+    "world-canvas-anchor-v070.png",
+    "world-clean-v070.png",
+    "world-main-v070.png",
+    "mission-sidebar-v070.png"
+  ],
+  "tolerancePerChannel": 8,
+  "anchor": {
+    "comparable": true,
+    "width": 960,
+    "height": 608,
+    "totalPixels": 583680,
+    "differingPixels": 0,
+    "diffRatio": 0,
+    "regionRatios": {
+      "worldCanvas": {
+        "diffPixels": 0,
+        "ratioPercent": 0
+      }
+    },
+    "yBands": {
+      "topbar": 0,
+      "worldUpper": 0,
+      "hotbarBand": 0,
+      "footer": 0
+    }
+  },
+  "main": {
+    "comparable": true,
+    "width": 1280,
+    "height": 720,
+    "totalPixels": 921600,
+    "differingPixels": 136,
+    "diffRatio": 0.015,
+    "regionRatios": {
+      "topbar": {
+        "diffPixels": 76,
+        "ratioPercent": 0.078
+      },
+      "footer": {
+        "diffPixels": 60,
+        "ratioPercent": 0.13
+      },
+      "questPanel": {
+        "diffPixels": 0,
+        "ratioPercent": 0
+      },
+      "worldCanvas": {
+        "diffPixels": 0,
+        "ratioPercent": 0
+      }
+    },
+    "yBands": {
+      "topbar": 76,
+      "worldUpper": 0,
+      "hotbarBand": 0,
+      "footer": 60
+    }
+  },
+  "hudAttribution": {
+    "differingPixels": 136,
+    "hotbarBandPixels": 0,
+    "hotbarBandSharePercent": 0,
+    "note": "V0.7 零 HUD 改动；全屏对 V0.6.1 main 的差异预期为 0 或集中在白名单区域；3D 世界区域零差异由 anchor 独立验证。"
+  },
+  "missionSidebarScene": {
+    "sidebarOpen": "true",
+    "cards": 24,
+    "drawCalls": 329
+  },
+  "pageErrors": [],
+  "verdict": {
+    "AC-7040 worldCanvas 0px": "PASS",
+    "AC-7041 HUD whitelist": "ATTRIBUTED (see main.regionRatios / DDR-0001 + DDR-0002 §3)",
+    "AC-7044 sidebar overlay": "PASS (frozen separately)"
+  },
+  "note": "锚点截图隐藏全部 HUD；world-main 含 HUD，差异按 DDR 白名单归因；任务侧栏场景单独冻结，不与旧区域混判。"
+}

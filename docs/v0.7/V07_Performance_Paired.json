@@ -1,0 +1,73 @@
+{
+  "date": "2026-11-16T03:50:12.746Z",
+  "task": "V07-025 / D-2 ABBA paired measurement",
+  "method": "same machine, same script, same page, ABBA order, 180 rAF frames per run, software WebGL; B = fixed mission sidebar (DOM overlay)",
+  "order": [
+    "A1",
+    "B1",
+    "B2",
+    "A2"
+  ],
+  "runs": {
+    "A1": {
+      "label": "A1 clean world",
+      "frames": 180,
+      "avgFrameMs": 44.49,
+      "p95FrameMs": 50.1,
+      "maxFrameMs": 100,
+      "avgFps": 22.5,
+      "drawCalls": 329,
+      "triangles": 3936
+    },
+    "B1": {
+      "label": "B1 mission sidebar open",
+      "frames": 180,
+      "avgFrameMs": 45.56,
+      "p95FrameMs": 83.4,
+      "maxFrameMs": 100,
+      "avgFps": 21.9,
+      "drawCalls": 329,
+      "triangles": 3936
+    },
+    "B2": {
+      "label": "B2 mission sidebar open (repeat)",
+      "frames": 180,
+      "avgFrameMs": 46.85,
+      "p95FrameMs": 83.4,
+      "maxFrameMs": 100.1,
+      "avgFps": 21.3,
+      "drawCalls": 329,
+      "triangles": 3936
+    },
+    "A2": {
+      "label": "A2 clean world (repeat)",
+      "frames": 180,
+      "avgFrameMs": 44.75,
+      "p95FrameMs": 50.1,
+      "maxFrameMs": 100.1,
+      "avgFps": 22.3,
+      "drawCalls": 329,
+      "triangles": 3936
+    }
+  },
+  "paired": {
+    "A": {
+      "avgFrameMs": 44.62,
+      "drawCalls": 329,
+      "repeatDrawCalls": 329
+    },
+    "B": {
+      "avgFrameMs": 46.2,
+      "drawCalls": 329,
+      "repeatDrawCalls": 329
+    },
+    "frameTimeDeltaPercent": 3.54
+  },
+  "baselineCleanWorldDrawCalls": 329,
+  "verdict": {
+    "cleanWorldDrawCallsNoRegression": "PASS",
+    "sidebarOpenDrawCalls": "329 (recorded and attributed: DOM overlay adds no WebGL draw calls; no absolute threshold applied)",
+    "note": "帧时间按 D-2 用同机同脚本配对判定；不套用 DEV-603 记录的失真绝对阈值。"
+  },
+  "pageErrors": []
+}

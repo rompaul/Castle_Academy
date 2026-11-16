@@ -1,0 +1,696 @@
+{
+  "date": "2026-11-16T03:55:33.294Z",
+  "task": "V07-028 儿童安全与数据安全抽查（含 V0.7 反思边界运行时验证）",
+  "bannedWordScan": {
+    "files": 16,
+    "bannedWords": 28,
+    "hits": [],
+    "exemptions": [
+      {
+        "file": "src/ui/mission/MissionDetailPanel.tsx",
+        "line": 132,
+        "reason": "pre-existing negated copy 「不扣分」(V0.5 baseline)"
+      },
+      {
+        "file": "src/ui/mission/MissionDetailPanel.tsx",
+        "line": 164,
+        "reason": "pre-existing negated copy 「不扣分」(V0.5 baseline)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 7,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 8,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 9,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 10,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 11,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 12,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 13,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 14,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 15,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 16,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 17,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 18,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 19,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 20,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 21,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 22,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 23,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 24,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 25,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 26,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 27,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 28,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 29,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 30,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 32,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 33,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 34,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 35,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 36,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 37,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 38,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 39,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 40,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 41,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 43,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 44,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 45,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 46,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 47,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 48,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 50,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 51,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 52,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 53,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 54,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 55,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 56,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 57,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 58,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 59,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 60,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 61,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 62,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 63,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 64,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 65,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 66,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 67,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 68,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 69,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 70,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 71,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 72,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 73,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 74,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 75,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 76,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 77,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 78,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 79,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 80,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 81,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 82,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 83,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 84,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 85,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 86,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 87,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 88,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 89,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 90,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 91,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 92,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 93,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 94,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 95,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 96,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 97,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 98,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 99,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 100,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 101,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 102,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 103,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 104,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 105,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 106,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 107,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 108,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 109,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 110,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 111,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 112,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 113,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 114,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 115,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 116,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 117,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 118,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 119,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 120,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 121,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 122,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 124,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 125,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 126,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 127,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 128,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 129,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 130,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 131,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 132,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 133,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 134,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 135,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 136,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      },
+      {
+        "file": "src/ui/mission/v07InteractionModel.ts",
+        "line": 137,
+        "reason": "banned-word regex source (same class as glossary.ts)"
+      }
+    ],
+    "verdict": "PASS (0 hits; glossary.ts banned-word source exempted)"
+  },
+  "storage": {
+    "keyCountBefore": 3,
+    "keys": [
+      "castle.academy.learner",
+      "castle-academy-world-v1",
+      "castle-academy-view-v1"
+    ],
+    "knownKeyWhitelist": [
+      "castle.academy.learner",
+      "castle-academy-world-v1",
+      "castle-academy-view-v1"
+    ],
+    "unknownKeys": [],
+    "reflectionPersisted": false,
+    "note": "AC-7021/7022：反思文本必须不出现在任何 localStorage value；key 总数不变且全部在白名单内。",
+    "verdict": "PASS"
+  },
+  "hintLadder": {
+    "ladderText": "第 1 级 · 有些地方有水，有些地方没有，先别急着下结论。第 2 级 · 看看水源旁边、水沟尽头和护城河边上。第 3 级 · 走到亮起来的观察点，按「记下我看到」把三处都记下来。",
+    "revealRemaining": 0,
+    "verdict": "PASS (3 levels revealed on V0.7 exploration mission)"
+  },
+  "externalRequests": {
+    "urls": [
+      "https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap",
+      "https://fonts.gstatic.com/s/playfairdisplay/v40/nuFiD-vYSZviVYUb_rj3ij__anPXDTzYgA.woff2",
+      "https://fonts.gstatic.com/s/manrope/v23/xn7gYHE41ni1AdIRggexSg.woff2",
+      "https://fonts.gstatic.com/s/dmmono/v16/aFTU7PB1QTsUX8KYthqQBA.woff2",
+      "https://fonts.gstatic.com/s/playfairdisplay/v40/nuFkD-vYSZviVYUb_rj3ij__anPXDTnogkk7.woff2",
+      "https://fonts.gstatic.com/s/dmmono/v16/aFTR7PB1QTsUX8KYvumzEYOtbQ.woff2"
+    ],
+    "hosts": [
+      "fonts.googleapis.com",
+      "fonts.gstatic.com"
+    ],
+    "note": "仅 fonts.googleapis.com / fonts.gstatic.com（O-1 既有外链字体）即 PASS"
+  },
+  "pageErrors": [],
+  "aiInvolvement": "zero: no LLM / fetch-to-AI / cloud account code paths (V07_AI_ZERO_PARTICIPATION.json)"
+}
