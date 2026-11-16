@@ -29,7 +29,7 @@ async function status(page: Page, id: string) {
   );
 }
 
-test("Content Pack 24 个任务：批次 2 六个字段齐全，覆盖 4 个年龄带与六类表达形式（AC-230/231）", async ({ page }) => {
+test("Content Pack 25 个任务：批次 2 六个字段齐全，覆盖 4 个年龄带与六类表达形式（AC-230/231）", async ({ page }) => {
   await boot(page, false);
   const defs = await page.evaluate(() =>
     (window as any).__CASTLE_TEST__.getMissionDefinitions().map((m: any) => ({
@@ -41,7 +41,7 @@ test("Content Pack 24 个任务：批次 2 六个字段齐全，覆盖 4 个年�
       reward: m.reward?.title
     }))
   );
-  expect(defs).toHaveLength(24); // V07-021 末尾再追加 6 个形式任务（期望值适配已批准）
+  expect(defs).toHaveLength(25); // V07-021 末尾再追加 6 个形式任务（期望值适配已批准）
   // 切片显式上界 15：保持「批次 2 六个」的原语义，不把追加的电力 / 形式任务算进批次 2
   expect(defs.slice(9, 15).map((d: { id: string }) => d.id)).toEqual(CROSS_AGE_IDS);
   for (const def of defs.slice(9, 15)) {

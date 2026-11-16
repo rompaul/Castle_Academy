@@ -1,0 +1,47 @@
+{
+  "date": "2026-11-16T12:48:30.122Z",
+  "task": "V0.7.1 儿童安全与数据安全抽查（owner D2：4 key 白名单）",
+  "bannedWordScan": {
+    "files": 13,
+    "bannedWords": 28,
+    "hits": [],
+    "verdict": "PASS (0 hits)"
+  },
+  "storage": {
+    "keyCount": 4,
+    "keys": [
+      "castle-academy-view-v1",
+      "castle-academy-world-v1",
+      "castle.academy.learner",
+      "castle.academy.v071.progress"
+    ],
+    "knownKeyWhitelist": [
+      "castle.academy.learner",
+      "castle-academy-world-v1",
+      "castle-academy-view-v1",
+      "castle.academy.v071.progress"
+    ],
+    "unknownKeys": [],
+    "progressShape": {
+      "version": 1,
+      "completedMissionIds": [
+        "mission.bridge-repair.v1"
+      ],
+      "unlockedRewardIds": [
+        "resourceKit.masonry_basic"
+      ]
+    },
+    "freeTextLeaked": false,
+    "note": "第 4 key 只存任务 ID 与奖励 ID；不存儿童自由文本。",
+    "verdict": "PASS"
+  },
+  "externalRequests": {
+    "hosts": [
+      "fonts.googleapis.com",
+      "fonts.gstatic.com"
+    ],
+    "note": "仅 fonts.googleapis.com / fonts.gstatic.com（O-1 既有外链字体）即 PASS"
+  },
+  "pageErrors": [],
+  "aiInvolvement": "zero: V0.7.1 added no LLM / network / cloud code path"
+}

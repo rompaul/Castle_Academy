@@ -200,7 +200,7 @@ describe("V51-015 批次 1 评估器（AC-212 确定性）", () => {
 describe("V51-016 批次 2 内容质量（AC-230/231/232）", () => {
   it("6 个跨年龄带任务全部通过内容质量清单，全集覆盖 4 个年龄带与 6 种表达形式", () => {
     expect(CROSS_AGE_MISSIONS).toHaveLength(6);
-    expect(ALL_MISSIONS).toHaveLength(24); // V07-021：末尾再追加 6 个形式任务（期望值适配已批准）
+    expect(ALL_MISSIONS).toHaveLength(25); // V07-021：末尾再追加 6 个形式任务（期望值适配已批准）
     for (const mission of CROSS_AGE_MISSIONS) {
       expect(validateMissionDefinition(mission), mission.id).toEqual({ ok: true });
       expect(mission.hintLadder.length).toBeGreaterThanOrEqual(2);

@@ -84,10 +84,10 @@ describe("resolveMissionGraph 纯函数", () => {
     expect(resolveMissionGraph(set1)).toEqual(resolveMissionGraph(set2));
   });
 
-  it("24 个真实任务定义通过：无环、无悬空、恰为批准的 5 条边（V0.6 3 条 + V0.6.1 1 条 + V0.7 1 条）", () => {
+  it("25 个真实任务定义通过：无环、无悬空、恰为批准的 5 条边（V0.6 3 条 + V0.6.1 1 条 + V0.7 1 条；V0.7.1 无新边）", () => {
     const r = resolveMissionGraph(ALL_MISSIONS);
     expect(r.errors).toEqual([]);
-    expect(r.order).toHaveLength(24);
+    expect(r.order).toHaveLength(25);
     const edges = ALL_MISSIONS.flatMap((m) =>
       m.prerequisiteMissionIds.map((pre) => [pre, m.id] as const)
     ).sort();

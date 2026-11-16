@@ -152,6 +152,8 @@ export function App() {
       // Tab 在输入时不拦截，保留浏览器默认的焦点切换。
       const target = event.target as HTMLElement | null;
       if (isTypingTarget(target)) return;
+      // V0.7.1 工作台内的 Tab / 数字 / E / F 都归工作台自己，不触发世界快捷键。
+      if (target?.closest?.(".ca-v071-workbench") && event.key !== "Escape") return;
       // DDR-0002：数字键 1–9 切快捷格；默认 9 格仍为 BLOCKS[0..8]，V0.5 基线语义不变。
       const index = Number(event.key) - 1;
       if (index >= 0 && index < QUICK_SLOT_COUNT) {
@@ -186,7 +188,9 @@ export function App() {
   useEffect(() => {
     const onWheel = (event: WheelEvent) => {
       if (paletteOpen || event.deltaY === 0) return;
-      if (isTypingTarget(event.target as HTMLElement | null)) return;
+      const target = event.target as HTMLElement | null;
+      if (isTypingTarget(target)) return;
+      if (target?.closest?.(".ca-v071-workbench")) return;
       const step = event.deltaY > 0 ? 1 : -1;
       const next = (activeSlot + step + QUICK_SLOT_COUNT) % QUICK_SLOT_COUNT;
       setActiveSlot(next);

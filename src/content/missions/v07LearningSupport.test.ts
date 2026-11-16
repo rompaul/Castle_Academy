@@ -72,7 +72,7 @@ describe("V07-011 先决条件链（最多 1 条新链）", () => {
   it("合并图无环 / 无悬空 / 无自引用，共 5 条边，前置在拓扑序之前", () => {
     const graph = resolveMissionGraph(combined);
     expect(graph.errors).toEqual([]);
-    expect(graph.order).toHaveLength(24);
+    expect(graph.order).toHaveLength(25);
     const edgeCount = combined.reduce((sum, m) => sum + m.prerequisiteMissionIds.length, 0);
     expect(edgeCount).toBe(5);
     expect(graph.order.indexOf("mission.find-the-pattern.v1"))

@@ -27,6 +27,11 @@ import {
   ELECTRICAL_EVENTS,
   type ElectricalNetworkChangedPayload,
 } from "../plugins/electrical/events";
+import { BridgeSession } from "../features/engineering-design/BridgeSession";
+import { BRIDGE_SCENARIO } from "../features/engineering-design/scenario";
+import { isConstructionComplete } from "../features/engineering-design/design";
+import { V071_MISSION_CONTRACT } from "../content/missions/v071MissionContracts";
+import { V071BridgeScene } from "./V071BridgeScene";
 
 const BLOCK_SIZE = 1;
 
@@ -56,6 +61,9 @@ export class ThreeWorldRenderer {
   readonly learnerProfile: LearnerProfilePlugin;
   readonly reward: RewardPlugin;
   readonly missionRuntime: MissionRuntimePlugin;
+  /** V0.7.1：桥梁任务会话（内存态）与动态 3D 场景（不落盘） */
+  readonly bridgeSession: BridgeSession;
+  private readonly bridgeScene: V071BridgeScene;
   private readonly waterRenderAdapter: WaterRenderAdapter;
   private readonly blockMeshes = new Map<string, THREE.Mesh>();
   private lineStart: GridPosition | null = null;
@@ -172,6 +180,15 @@ export class ThreeWorldRenderer {
     this.learnerProfile = new LearnerProfilePlugin(this.events);
     this.learnerProfile.activate();
     this.reward = new RewardPlugin(this.events);
+    this.bridgeSession = new BridgeSession(BRIDGE_SCENARIO, V071_MISSION_CONTRACT.blueprintName);
+    this.bridgeScene = new V071BridgeScene(this.scene, BRIDGE_SCENARIO);
+    this.bridgeSession.subscribe((snapshot) => {
+      this.bridgeScene.setActive(snapshot.sceneActive);
+      this.bridgeScene.setBlueprint(snapshot.blueprint);
+      this.bridgeScene.updateEvidence(snapshot.evidence);
+    });
+    this.events.on("world.block.placed", () => this.syncBridgeEvidence());
+    this.events.on("world.block.removed", () => this.syncBridgeEvidence());
     this.missionRuntime = new MissionRuntimePlugin(this.waterPlugin, this.events, {
       reward: this.reward,
       progressStore: new LearnerProfileProgressStore(this.learnerProfile, this.events),
@@ -182,7 +199,9 @@ export class ThreeWorldRenderer {
       },
       sectionEnabled: () => this.layerPlugin.getSectionView().enabled,
       // V0.6.1（V061-021）：电力只读查询供 3 个确定性评估器使用；派生态不落快照。
-      electrical: () => this.electricalPlugin.getQuery()
+      electrical: () => this.electricalPlugin.getQuery(),
+      // V0.7.1：桥梁施工证据只读通道，来自会话派生态，不写 WorldSnapshot。
+      bridgeEvidence: () => this.bridgeSession.getSnapshot().evidence ?? undefined
     });
     this.waterRenderAdapter = new WaterRenderAdapter(this.layerRenderAdapter, (y) =>
       this.layerPlugin.resolveLayerId(y) ?? this.layerPlugin.getDefaultLayerId() ?? "ground"
@@ -349,7 +368,12 @@ export class ThreeWorldRenderer {
           getTextEvidence: (missionId: string) => this.missionRuntime.getTextEvidence(missionId),
           emitMeasurementUsed: () => this.events.emit("measurement.used", { tool: "distance" }),
           placeWaterSource: (x: number, y: number, z: number) => this.addBlock({ x, y, z }, "water_source"),
-          removeWaterSource: (x: number, y: number, z: number) => this.removeBlock({ x, y, z })
+          removeWaterSource: (x: number, y: number, z: number) => this.removeBlock({ x, y, z }),
+          // V0.7.1：只读性能配对用，把动态桥梁场景收起（不写任何存档）
+          resetV071Bridge: () => {
+            this.bridgeSession.reset();
+            this.blueprint.deleteBlueprint(V071_MISSION_CONTRACT.blueprintName);
+          }
         }
       });
     }
@@ -386,6 +410,36 @@ export class ThreeWorldRenderer {
     // V0.5 城堡水务舞台：护城河 / 水井 / 地牢积水池（幂等，布局见 castleStage.ts）
     // 舞台是静态地形：不投射阴影（shadow pass caster 数量从 ~330 降回 ~90，保住帧率）
     buildCastleWaterStage((position, blockId) => this.addBlock(position, blockId, false));
+  }
+
+  /** 把当前设计蓝图存入既有 BlueprintPlugin（仅数据层；不自动落方块）。 */
+  saveV071Blueprint(): boolean {
+    const blueprint = this.bridgeSession.getSnapshot().blueprint;
+    if (!blueprint) return false;
+    const blocks = blueprint.requiredCells.map((cell) => ({
+      x: blueprint.origin.x + cell.dx,
+      y: blueprint.origin.y + cell.dy,
+      z: blueprint.origin.z + cell.dz,
+      blockId: cell.materialBlockId
+    }));
+    return this.blueprint.saveBlueprint(V071_MISSION_CONTRACT.blueprintName, blocks);
+  }
+
+  /** 把镜头移到桥梁施工点，供「进入施工现场」使用；只改相机，不改世界。 */
+  focusV071Site(): void {
+    this.player.camera.position.set(11, 8, 17);
+    this.player.camera.lookAt(11, 1, 7);
+  }
+
+  /** 方块变化后刷新桥梁施工证据；只在任务蓝图存在时工作。 */
+  private syncBridgeEvidence(): void {
+    const snapshot = this.bridgeSession.getSnapshot();
+    if (!snapshot.blueprint) return;
+    this.bridgeSession.syncEvidence((position) => this.world.get(position)?.blockId);
+    const evidence = this.bridgeSession.getSnapshot().evidence;
+    if (evidence && isConstructionComplete(evidence) && this.bridgeSession.getSnapshot().stage === "construction") {
+      this.bridgeSession.completeConstruction();
+    }
   }
 
   private key(position: GridPosition): string {
@@ -841,6 +895,8 @@ export class ThreeWorldRenderer {
     this.electricalOverlayGeometry.dispose();
     this.electricalOverlayMaterial.dispose();
     this.missionRuntime.dispose();
+    this.bridgeScene.dispose();
+    this.bridgeSession.dispose();
     this.learnerProfile.dispose();
     this.waterRenderAdapter.dispose();
     this.unsubscribeLayerEvents.forEach((unsub) => unsub());

@@ -10,6 +10,7 @@ import { ELECTRICAL_EVENTS, type ElectricalNetworkChangedPayload } from "../../p
 import type { LearnerProfile } from "../../plugins/learner/types";
 import {
   MISSION_EVENTS,
+  type MissionCompletedPayload,
   type MissionOfferedPayload,
   type MissionRewardGrantedPayload
 } from "../../plugins/mission/events";
@@ -18,6 +19,9 @@ import { MissionSidebar } from "./MissionSidebar";
 import { MissionDetailPanel } from "./MissionDetailPanel";
 import { V07FormInteraction } from "./V07FormInteractions";
 import { V07_MISSION_IDS } from "../../content/missions/v07MissionContracts";
+import { V071_MISSION_ID, V071_REWARD_ID } from "../../content/missions/v071MissionContracts";
+import { unlockV071Reward } from "../../features/engineering-design/V071ProgressStore";
+import { V071BridgeWorkbench } from "./V071BridgeWorkbench";
 import { EvidenceRecordPanel } from "./EvidenceRecordPanel";
 import { ElectricalStatusBar } from "./ElectricalStatusBar";
 import { ElectricalSafetyGuide } from "./ElectricalSafetyGuide";
@@ -63,6 +67,8 @@ export function MissionExperience({ gameRef }: Props) {
   /** V061-023：电力状态消息（干净世界为 null）；V061-022：首次安全引导 */
   const [electricalStatus, setElectricalStatus] = useState<ElectricalStatusKey | null>(null);
   const [safetyGuideOpen, setSafetyGuideOpen] = useState(false);
+  /** V0.7.1：桥梁任务使用独立工作台，不复用 V0.7 形式面板 */
+  const [workbenchOpen, setWorkbenchOpen] = useState(false);
   const closeTimer = useRef<number | null>(null);
 
   const open = pinned || hovered || explicitOpen;
@@ -123,6 +129,12 @@ export function MissionExperience({ gameRef }: Props) {
       };
       unsubs = [
         game.events.on<MissionOfferedPayload>(MISSION_EVENTS.offered, (e) => setMissions(e.payload.missions)),
+        game.events.on<MissionCompletedPayload>(MISSION_EVENTS.completed, (e) => {
+          if (e.payload.missionId === V071_MISSION_ID) {
+            gameRef.current?.bridgeSession.markCompleted();
+            unlockV071Reward(V071_REWARD_ID, V071_MISSION_ID);
+          }
+        }),
         game.events.on(MISSION_EVENTS.progressUpdated, sync),
         game.events.on(MISSION_EVENTS.activated, sync),
         game.events.on(LEARNER_EVENTS.created, onProfileReady),
@@ -194,8 +206,15 @@ export function MissionExperience({ gameRef }: Props) {
   const selectMission = (missionId: string) => {
     gameRef.current?.activateMission(missionId);
     setSelectedId(missionId);
-    setDetailOpen(true);
     setOnboardingMode("none"); // 开始玩任务后不再显示引导卡片
+    if (missionId === V071_MISSION_ID) {
+      gameRef.current?.bridgeSession.start();
+      setDetailOpen(false);
+      setWorkbenchOpen(true);
+      return;
+    }
+    setWorkbenchOpen(false);
+    setDetailOpen(true);
     // V061-022：首次进入电力内容时显示一次安全引导（会话内一次，不写任何存储）
     if (!safetyGuideShownThisSession && ELECTRICAL_MISSIONS.some((m) => m.id === missionId)) {
       safetyGuideShownThisSession = true;
@@ -316,6 +335,13 @@ export function MissionExperience({ gameRef }: Props) {
             );
           })()}
         </MissionDetailPanel>
+      )}
+
+      {workbenchOpen && selectedId === V071_MISSION_ID && (
+        <V071BridgeWorkbench
+          gameRef={gameRef}
+          onClose={() => setWorkbenchOpen(false)}
+        />
       )}
 
       <OnboardingFlow

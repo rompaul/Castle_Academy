@@ -30,10 +30,10 @@ describe("V07-008 六个新任务内容（schema v2，纯数据）", () => {
     }
   });
 
-  it("V07-021 已接入唯一入口：24 个任务零重复，新 6 个只追加在末尾，评估器 1:1", () => {
-    expect(ALL_MISSIONS).toHaveLength(24);
-    expect(new Set(ALL_MISSIONS.map((m) => m.id)).size).toBe(24);
-    expect(ALL_MISSIONS.slice(18).map((m) => m.id)).toEqual(V07_MISSION_CONTRACTS.map((c) => c.id));
+  it("V07-021 已接入唯一入口：25 个任务零重复，新 6 个仍紧跟第 18 位，桥梁任务在其后", () => {
+    expect(ALL_MISSIONS).toHaveLength(25);
+    expect(new Set(ALL_MISSIONS.map((m) => m.id)).size).toBe(25);
+    expect(ALL_MISSIONS.slice(18, 24).map((m) => m.id)).toEqual(V07_MISSION_CONTRACTS.map((c) => c.id));
     expect(V07_MISSIONS.map((m) => m.evaluatorId)).toEqual(INTERACTIVE_EVALUATORS.map((e) => e.id));
     const legacy = ALL_MISSIONS.slice(0, 18).map((m) => m.id);
     for (const mission of V07_MISSIONS) {
@@ -41,8 +41,8 @@ describe("V07-008 六个新任务内容（schema v2，纯数据）", () => {
     }
   });
 
-  it("知识点引用逐条等于冻结映射，全部命中已注册 24 个 ID，零编造", () => {
-    expect(KNOWLEDGE_POINTS).toHaveLength(24);
+  it("知识点引用逐条等于冻结映射，全部命中已注册 27 个 ID，零编造", () => {
+    expect(KNOWLEDGE_POINTS).toHaveLength(27);
     V07_MISSIONS.forEach((mission, index) => {
       expect(mission.knowledgePointIds, mission.id).toEqual(
         [...V07_MISSION_CONTRACTS[index].knowledgePointIds]

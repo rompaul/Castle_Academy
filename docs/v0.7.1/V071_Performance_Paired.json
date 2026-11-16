@@ -1,0 +1,69 @@
+{
+  "date": "2026-11-16T12:49:28.857Z",
+  "task": "V0.7.1 / D-2 ABBA paired measurement",
+  "method": "same machine, same script, same page, ABBA order, 180 rAF frames per run, software WebGL; B = bridge site with ghost blueprint + DOM workbench",
+  "order": [
+    "A1",
+    "B1",
+    "B2",
+    "A2"
+  ],
+  "runs": {
+    "A1": {
+      "label": "A1 clean world",
+      "frames": 180,
+      "avgFrameMs": 47.97,
+      "p95FrameMs": 83.3,
+      "avgFps": 20.8,
+      "drawCalls": 329,
+      "triangles": 3936
+    },
+    "B1": {
+      "label": "B1 bridge construction overlay",
+      "frames": 180,
+      "avgFrameMs": 18.97,
+      "p95FrameMs": 33.4,
+      "avgFps": 52.7,
+      "drawCalls": 397,
+      "triangles": 4742
+    },
+    "B2": {
+      "label": "B2 bridge construction overlay (repeat)",
+      "frames": 180,
+      "avgFrameMs": 18.46,
+      "p95FrameMs": 33.4,
+      "avgFps": 54.2,
+      "drawCalls": 397,
+      "triangles": 4742
+    },
+    "A2": {
+      "label": "A2 clean world (repeat)",
+      "frames": 180,
+      "avgFrameMs": 48.73,
+      "p95FrameMs": 50.1,
+      "avgFps": 20.5,
+      "drawCalls": 329,
+      "triangles": 3936
+    }
+  },
+  "paired": {
+    "A": {
+      "avgFrameMs": 48.35,
+      "drawCalls": 329,
+      "repeatDrawCalls": 329
+    },
+    "B": {
+      "avgFrameMs": 18.71,
+      "drawCalls": 397,
+      "repeatDrawCalls": 397
+    },
+    "frameTimeDeltaPercent": -61.3
+  },
+  "baselineCleanWorldDrawCalls": 329,
+  "verdict": {
+    "cleanWorldDrawCallsNoRegression": "PASS",
+    "bridgeOverlayDrawCalls": "397 (recorded and attributed: task scene is derived overlay; no absolute threshold applied)",
+    "note": "A/B 镜头位置不同（B 进入施工现场后会聚焦河道），帧时间只记录，不把 B 更快归因于 overlay；不套用失真绝对阈值。"
+  },
+  "pageErrors": []
+}

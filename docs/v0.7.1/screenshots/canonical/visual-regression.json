@@ -1,0 +1,32 @@
+{
+  "date": "2026-11-16T12:56:06.826Z",
+  "task": "V0.7.1 visual regression + new UI canonical freeze",
+  "baseline": {
+    "anchor": "docs/v0.6/screenshots/canonical/world-canvas-anchor-v060.png",
+    "main": "docs/v0.6.1/screenshots/canonical/world-main-v061.png"
+  },
+  "frozen": [
+    "world-canvas-anchor-v071.png",
+    "workbench-design-v071.png",
+    "workbench-knowledge-v071.png",
+    "workbench-construction-v071.png"
+  ],
+  "anchor": {
+    "comparable": true,
+    "width": 960,
+    "height": 608,
+    "differingPixels": 0,
+    "diffRatio": 0
+  },
+  "renderInfo": {
+    "drawCalls": 397,
+    "triangles": 4742,
+    "textures": 2,
+    "geometries": 11
+  },
+  "pageErrors": [],
+  "verdict": {
+    "3D anchor 0px": "PASS",
+    "new UI canonical frozen": "PASS"
+  }
+}

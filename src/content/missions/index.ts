@@ -3,6 +3,7 @@ import { WATER_EXTENSION_MISSIONS } from "./waterExtensionMissions";
 import { CROSS_AGE_MISSIONS } from "./crossAgeMissions";
 import { ELECTRICAL_MISSIONS } from "./electricalMissions";
 import { V07_MISSIONS } from "./interactiveMissions";
+import { V071_MISSIONS } from "./v071Missions";
 import type { MissionDefinition } from "./types";
 
 /**
@@ -18,7 +19,8 @@ export const ALL_MISSIONS: readonly MissionDefinition[] = [
   ...WATER_EXTENSION_MISSIONS,
   ...CROSS_AGE_MISSIONS,
   ...ELECTRICAL_MISSIONS,
-  ...V07_MISSIONS
+  ...V07_MISSIONS,
+  ...V071_MISSIONS
 ];
 
 export function getMissionById(id: string): MissionDefinition | undefined {
@@ -29,4 +31,4 @@ export function getMissionByEvaluatorId(evaluatorId: string): MissionDefinition 
   return ALL_MISSIONS.find((mission) => mission.evaluatorId === evaluatorId);
 }
 
-export { CASTLE_WATER_MISSIONS, WATER_EXTENSION_MISSIONS, CROSS_AGE_MISSIONS, ELECTRICAL_MISSIONS, LEGACY_QUEST_ID_BY_MISSION, MISSION_ID_BY_LEGACY_QUEST };
+export { CASTLE_WATER_MISSIONS, WATER_EXTENSION_MISSIONS, CROSS_AGE_MISSIONS, ELECTRICAL_MISSIONS, V07_MISSIONS, V071_MISSIONS, LEGACY_QUEST_ID_BY_MISSION, MISSION_ID_BY_LEGACY_QUEST };

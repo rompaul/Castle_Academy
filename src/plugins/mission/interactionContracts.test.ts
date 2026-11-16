@@ -123,6 +123,6 @@ describe("V07-004 只读交互通道契约（ADR-0014 决策 4）", () => {
     const moat = registry.get("evaluator.moat")!;
     expect(moat.evaluate(legacyQuery)).toMatchObject({ progress: 0, complete: false });
     expect(moat.describe(legacyQuery)).toMatchObject({ done: 0, total: expect.any(Number) });
-    expect(registry.ids()).toHaveLength(24); // V07-021：同一注册表追加 6 个形式评估器
+    expect(registry.ids()).toHaveLength(25); // V07-021：同一注册表追加 6 个形式评估器
   });
 });

@@ -56,7 +56,7 @@ describe("V51-007 MissionRuntimePlugin（状态机 + 双事件迁移期）", () 
     water.dispose();
   });
 
-  it("激活时发射 mission.offered 与旧 quest.updated；19 个 available + 5 个 locked（V06-011 / V0.6.1 / V0.7）", () => {
+  it("激活时发射 mission.offered 与旧 quest.updated；20 个 available + 5 个 locked（V06-011 / V0.6.1 / V0.7 / V0.7.1）", () => {
     const offered: MissionOfferedPayload[] = [];
     const quests: QuestUpdatedPayload[] = [];
     events.on<MissionOfferedPayload>(MISSION_EVENTS.offered, (e) => offered.push(e.payload));
@@ -64,7 +64,7 @@ describe("V51-007 MissionRuntimePlugin（状态机 + 双事件迁移期）", () 
     runtime.activate();
 
     expect(offered.length).toBeGreaterThan(0);
-    expect(offered[0].missions).toHaveLength(24); // V07-021：6 个形式任务只追加到末尾
+    expect(offered[0].missions).toHaveLength(25); // V07-021 24 + V0.7.1 桥梁任务 1
     expect(offered[0].missions.slice(0, 3).map((m) => m.id)).toEqual([
       "mission.moat.v1", "mission.well.v1", "mission.dungeon.v1"
     ]);
@@ -76,7 +76,7 @@ describe("V51-007 MissionRuntimePlugin（状态机 + 双事件迁移期）", () 
     expect(byId.get("mission.material-budget.v1")).toBe("locked");
     expect(byId.get("mission.electric-switch-magic.v1")).toBe("locked");
     expect(byId.get("mission.choose-water-route.v1")).toBe("locked");
-    expect([...byId.values()].filter((s) => s === "available")).toHaveLength(19);
+    expect([...byId.values()].filter((s) => s === "available")).toHaveLength(20);
     expect(quests.length).toBeGreaterThan(0);
     expect(quests[0].quests.map((q) => q.id)).toEqual(["quest-moat", "quest-well", "quest-dungeon"]);
   });
@@ -121,7 +121,7 @@ describe("V51-007 MissionRuntimePlugin（状态机 + 双事件迁移期）", () 
     const custom = new MissionRuntimePlugin(water, events, { capabilities, reward });
     custom.activate();
     const list = custom.getMissions();
-    expect(list).toHaveLength(24);
+    expect(list).toHaveLength(25);
     expect(list.every((m) => m.status === "unavailable")).toBe(true);
     expect(list[0].progressText).toBe("暂不可玩");
     expect(custom.activateMission("mission.moat.v1")).toBe(false);

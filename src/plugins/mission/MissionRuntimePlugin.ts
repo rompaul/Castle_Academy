@@ -51,6 +51,8 @@ export interface MissionRuntimeOptions {
   sectionEnabled?: () => boolean;
   /** V0.6.1（V061-021）电力只读查询；未注入时电力评估器恒 0 进度，旧测试零影响 */
   electrical?: () => ElectricalQuery;
+  /** V0.7.1 桥梁施工只读证据；未注入时桥评估器恒 0 进度，旧测试零影响 */
+  bridgeEvidence?: () => import("../../features/engineering-design/types").ConstructionEvidence | undefined;
 }
 
 interface MissionState {
@@ -113,6 +115,7 @@ export class MissionRuntimePlugin {
   private readonly world?: WorldReadQuery;
   private readonly sectionEnabled: () => boolean;
   private readonly electrical?: () => ElectricalQuery;
+  private readonly bridgeEvidence?: () => import("../../features/engineering-design/types").ConstructionEvidence | undefined;
 
   constructor(
     private readonly water: WaterPlugin,
@@ -127,6 +130,7 @@ export class MissionRuntimePlugin {
     this.world = options.world;
     this.sectionEnabled = options.sectionEnabled ?? (() => false);
     this.electrical = options.electrical;
+    this.bridgeEvidence = options.bridgeEvidence;
   }
 
   activate(): void {
@@ -476,7 +480,8 @@ export class MissionRuntimePlugin {
       electrical: this.electrical?.(),
       observationLog: interaction.observationLog,
       variableComparison: interaction.variableComparison,
-      decisionSequence: interaction.decisionSequence
+      decisionSequence: interaction.decisionSequence,
+      bridgeEvidence: this.bridgeEvidence?.()
     };
   }
 

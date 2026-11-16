@@ -16,6 +16,7 @@ import { MOAT_FLOOR_CELLS, WELL_SHAFT_CELLS, DUNGEON_DRY_CELLS } from "../learni
 import { registerExtendedEvaluators } from "./extendedEvaluators";
 import { registerElectricalEvaluators } from "./electricalEvaluators";
 import { registerInteractiveEvaluators } from "./interactiveEvaluators";
+import { registerBridgeEvaluators } from "./bridgeEvaluators";
 
 /* ==================== 以下为 V0.5 原样迁移（勿改写） ==================== */
 
@@ -159,6 +160,10 @@ export interface EvaluatorQuery {
   observationLog?: ReadonlyArray<ObservationEntry>;
   variableComparison?: ReadonlyArray<VariablePair>;
   decisionSequence?: ReadonlyArray<DecisionEntry>;
+  /**
+   * V0.7.1：桥梁施工只读证据；未注入时桥评估器降级为 0 进度，既有 24 个评估器零影响。
+   */
+  bridgeEvidence?: import("../../features/engineering-design/types").ConstructionEvidence;
 }
 
 export interface EvaluatorResult {
@@ -249,6 +254,8 @@ export function createDefaultEvaluatorRegistry(): EvaluatorRegistry {
   registerElectricalEvaluators(registry);
   // V0.7（V07-021）：六类形式专属评估器，只追加到同一注册表；既有 18 个 ID 零变更。
   registerInteractiveEvaluators(registry);
+  // V0.7.1：桥梁任务评估器只追加；既有 24 个 ID 零改动。
+  registerBridgeEvaluators(registry);
   return registry;
 }
 

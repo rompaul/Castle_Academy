@@ -263,6 +263,34 @@ export const KNOWLEDGE_POINTS: readonly KnowledgePointDefinition[] = [
     aspect: '',
     status: 'active',
   },
+  /* ---------- V0.7.1 / D3（owner 2026-11-16 授权 append-only）：24 → 27 ---------- */
+  {
+    id: 'kp.measurement.area',
+    label: '面积',
+    summary: '长和宽一起决定一层格子有多少。',
+    domain: 'measurement',
+    concept: 'area',
+    aspect: '',
+    status: 'active',
+  },
+  {
+    id: 'kp.arithmetic.multiplication',
+    label: '乘法算总数',
+    summary: '几排、每排几个，可以用乘法很快算出一共有多少。',
+    domain: 'arithmetic',
+    concept: 'multiplication',
+    aspect: '',
+    status: 'active',
+  },
+  {
+    id: 'kp.engineering.material_count',
+    label: '材料数量',
+    summary: '先数要铺多少格，再按每格用几块算出材料总数。',
+    domain: 'engineering',
+    concept: 'material_count',
+    aspect: '',
+    status: 'active',
+  },
 ];
 
 export type KnowledgePointValidationResult = {

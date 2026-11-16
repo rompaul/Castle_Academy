@@ -13,9 +13,9 @@ describe("V07-006 六个新任务 ID / evaluator ID / 知识点映射冻结", ()
   it("6 个任务 ID 合法、零重复；V07-021 后在 ALL_MISSIONS 末尾且全量零重复", () => {
     expect(V07_MISSION_IDS).toHaveLength(6);
     expect(new Set(V07_MISSION_IDS).size).toBe(6);
-    expect(ALL_MISSIONS).toHaveLength(24);
-    expect(new Set(ALL_MISSIONS.map((m) => m.id)).size).toBe(24);
-    expect(ALL_MISSIONS.slice(18).map((m) => m.id)).toEqual(V07_MISSION_IDS);
+    expect(ALL_MISSIONS).toHaveLength(25);
+    expect(new Set(ALL_MISSIONS.map((m) => m.id)).size).toBe(25);
+    expect(ALL_MISSIONS.slice(18, 24).map((m) => m.id)).toEqual(V07_MISSION_IDS);
     for (const id of V07_MISSION_IDS) {
       expect(id, id).toMatch(MISSION_ID_PATTERN);
     }
@@ -23,8 +23,8 @@ describe("V07-006 六个新任务 ID / evaluator ID / 知识点映射冻结", ()
 
   it("6 个 evaluator ID 合法、零重复；V07-021 后已注册到同一默认注册表", () => {
     const registry = createDefaultEvaluatorRegistry();
-    expect(registry.ids()).toHaveLength(24);
-    expect(new Set(registry.ids()).size).toBe(24);
+    expect(registry.ids()).toHaveLength(25);
+    expect(new Set(registry.ids()).size).toBe(25);
     expect(V07_EVALUATOR_IDS).toHaveLength(6);
     expect(new Set(V07_EVALUATOR_IDS).size).toBe(6);
     for (const id of V07_EVALUATOR_IDS) {
@@ -33,8 +33,8 @@ describe("V07-006 六个新任务 ID / evaluator ID / 知识点映射冻结", ()
     }
   });
 
-  it("所有知识点引用命中已注册 24 个 ID，零编造、零新增", () => {
-    expect(KNOWLEDGE_POINTS).toHaveLength(24);
+  it("所有知识点引用命中已注册 27 个 ID，零编造；V0.7 六任务仍只用原 24 个", () => {
+    expect(KNOWLEDGE_POINTS).toHaveLength(27);
     for (const contract of V07_MISSION_CONTRACTS) {
       expect(contract.knowledgePointIds.length, contract.id).toBeGreaterThan(0);
       for (const id of contract.knowledgePointIds) {

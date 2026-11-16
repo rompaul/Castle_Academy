@@ -15,6 +15,7 @@ import type { MissionDefinition, MissionSummary } from "../content/missions/type
 import type { AgeBand, LearnerProfile } from "../plugins/learner/types";
 import type { MissionRuntimePlugin } from "../plugins/mission/MissionRuntimePlugin";
 import type { LearnerProfilePlugin } from "../plugins/learner/LearnerProfilePlugin";
+import type { BridgeSession } from "../features/engineering-design/BridgeSession";
 import { deriveElectricalStatus } from "../content/electrical/status";
 import type { ElectricalStatusKey } from "../content/electrical/glossary";
 
@@ -54,6 +55,12 @@ export interface GameActions {
   toggleFocusedBlock: () => boolean;
   /** V0.7：两态对照卡只读电力观察；可选方法，旧调用方零影响 */
   getElectricalQuery?: () => import("../plugins/electrical/query").ElectricalQuery;
+  /** V0.7.1：桥梁任务会话（内存态，零落盘） */
+  bridgeSession: BridgeSession;
+  /** V0.7.1：镜头移到桥梁施工点，只改相机 */
+  focusV071Site: () => void;
+  /** V0.7.1：把设计蓝图存入既有 BlueprintPlugin，不自动放置方块 */
+  saveV071Blueprint: () => boolean;
 }
 
 interface Props {
@@ -141,7 +148,10 @@ export function GameCanvas({ selectedBlock, onPlayingChange, onMessage, onPersis
         blocks: engine.world.all()
       }),
       toggleFocusedBlock: () => engine.toggleFocusedBlock(),
-      getElectricalQuery: () => engine.electricalPlugin.getQuery()
+      getElectricalQuery: () => engine.electricalPlugin.getQuery(),
+      bridgeSession: engine.bridgeSession,
+      focusV071Site: () => engine.focusV071Site(),
+      saveV071Blueprint: () => engine.saveV071Blueprint()
     };
 
     // Persist layer/section view state whenever it changes (V0.4).

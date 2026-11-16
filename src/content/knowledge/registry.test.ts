@@ -50,9 +50,9 @@ describe('知识点 ID 正则（冻结）', () => {
 });
 
 describe('Registry 数据完整性', () => {
-  it('注册了 24 个唯一 ID（V0.6 的 19 个 + V0.6.1 追加 5 个）', () => {
+  it('注册了 27 个唯一 ID（V0.6 的 19 个 + V0.6.1 追加 5 个 + V0.7.1 append-only 3 个）', () => {
     expect(new Set(KNOWLEDGE_POINTS.map((kp) => kp.id)).size).toBe(KNOWLEDGE_POINTS.length);
-    expect(KNOWLEDGE_POINTS.length).toBe(24);
+    expect(KNOWLEDGE_POINTS.length).toBe(27);
   });
 
   it('全部条目通过结构化校验', () => {

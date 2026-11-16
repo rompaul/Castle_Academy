@@ -122,9 +122,9 @@ describe("V061-018/019/020 电力任务 schema v2 与内容质量（AC-6739~6744
     expect(ELECTRICAL_LOW_AGE_PATHS.C2.system).toBe("water");
     expect(ELECTRICAL_LOW_AGE_PATHS.C1.hintLadder).toHaveLength(3);
     expect(ELECTRICAL_LOW_AGE_PATHS.C2.hintLadder).toHaveLength(3);
-    // Q-3 只批 3 个电力任务（15 → 18）；V0.7 再在末尾追加 6 个形式任务（18 → 24），
-    // 电力三任务仍固定占第 15~17 位，既有 ID 与顺序零变更。
-    expect(ALL_MISSIONS).toHaveLength(24);
+    // Q-3 只批 3 个电力任务（15 → 18）；V0.7 追加 6 个形式任务（18 → 24），
+    // V0.7.1 再追加 1 个桥梁工程任务（24 → 25）。电力三任务仍固定占第 15~17 位。
+    expect(ALL_MISSIONS).toHaveLength(25);
     expect(ALL_MISSIONS.slice(15, 18).map((m) => m.id))
       .toEqual(ELECTRICAL_MISSIONS.map((m) => m.id));
   });
@@ -135,7 +135,7 @@ describe("V061-018/019/020 电力任务 schema v2 与内容质量（AC-6739~6744
     expect(ELECTRICAL_MISSIONS[2].prerequisiteMissionIds).toEqual([]);
     const graph = resolveMissionGraph(ALL_MISSIONS);
     expect(graph.errors).toEqual([]);
-    expect(graph.order).toHaveLength(24);
+    expect(graph.order).toHaveLength(25);
     const edges = ALL_MISSIONS.flatMap((m) =>
       m.prerequisiteMissionIds.map((pre) => [pre, m.id] as const)
     ).sort();

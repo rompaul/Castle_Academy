@@ -84,9 +84,9 @@ describe("V07-013~019 形式组件渲染（服务端静态标记，无 DOM 依�
   });
 
   it("V07-021 后白名单恰好等于末尾 6 个新任务；既有 18 个一个都不在内", () => {
-    expect(ALL_MISSIONS).toHaveLength(24);
+    expect(ALL_MISSIONS).toHaveLength(25);
     expect(V07_MISSION_IDS).toHaveLength(6);
-    expect(ALL_MISSIONS.slice(18).map((m) => m.id)).toEqual(V07_MISSION_IDS);
+    expect(ALL_MISSIONS.slice(18, 24).map((m) => m.id)).toEqual(V07_MISSION_IDS);
     for (const mission of ALL_MISSIONS.slice(0, 18)) {
       expect(V07_MISSION_IDS).not.toContain(mission.id);
     }

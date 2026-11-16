@@ -34,7 +34,7 @@ describe("V07-020 UI token / 无障碍 / 零副作用", () => {
     const wheel = app.slice(app.indexOf("const onWheel"), app.indexOf("window.addEventListener(\"wheel\""));
     expect(keydown).toContain("if (isTypingTarget(target)) return;");
     expect(keydown.indexOf("isTypingTarget(target)")).toBeLessThan(keydown.indexOf("Number(event.key)"));
-    expect(wheel).toContain("isTypingTarget(event.target");
+    expect(wheel).toContain("isTypingTarget(target)");
   });
 
   it("存量 HUD 类未被删除，tokens.css 色值零改动", () => {
