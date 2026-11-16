@@ -207,7 +207,7 @@ export function App() {
           </div>
         </div>
         <div className="topbar-right">
-          <span className="version-pill">V0.6.1</span>
+          <span className="version-pill">V0.7.0</span>
           <button className="subtle-button" onClick={() => setLayerPanelOpen((v) => !v)}>
             {layerPanelOpen ? "Hide layers" : "Layers"}
           </button>
@@ -487,7 +487,7 @@ export function App() {
       <MissionExperience gameRef={gameRef} />
 
       <footer className="footer">
-        <span>CASTLE ACADEMY <b>V0.6.1</b></span>
+        <span>CASTLE ACADEMY <b>V0.7.0</b></span>
         <span>BUILD FIRST. SIMULATE NEXT. LEARN THROUGH BUILDING.</span>
         <span>LOCAL CREATIVE WORLD</span>
       </footer>
