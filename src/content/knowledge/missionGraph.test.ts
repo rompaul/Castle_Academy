@@ -84,16 +84,17 @@ describe("resolveMissionGraph 纯函数", () => {
     expect(resolveMissionGraph(set1)).toEqual(resolveMissionGraph(set2));
   });
 
-  it("18 个真实任务定义通过：无环、无悬空、恰为批准的 4 条边（V0.6 的 3 条 + V0.6.1 的 A→B）", () => {
+  it("24 个真实任务定义通过：无环、无悬空、恰为批准的 5 条边（V0.6 3 条 + V0.6.1 1 条 + V0.7 1 条）", () => {
     const r = resolveMissionGraph(ALL_MISSIONS);
     expect(r.errors).toEqual([]);
-    expect(r.order).toHaveLength(18);
+    expect(r.order).toHaveLength(24);
     const edges = ALL_MISSIONS.flatMap((m) =>
       m.prerequisiteMissionIds.map((pre) => [pre, m.id] as const)
     ).sort();
     expect(edges).toEqual([
       ["mission.count-bridge.v1", "mission.material-budget.v1"],
       ["mission.electric-light-beacon.v1", "mission.electric-switch-magic.v1"],
+      ["mission.find-the-pattern.v1", "mission.choose-water-route.v1"],
       ["mission.seven-steps.v1", "mission.broken-pipe.v1"],
       ["mission.water-flow.v1", "mission.seven-steps.v1"],
     ]);

@@ -18,7 +18,7 @@ async function boot(page: import("@playwright/test").Page) {
   await expect.poll(() => page.evaluate(() => Boolean((window as any).__CASTLE_TEST__))).toBe(true);
 }
 
-test("Content Pack 18 个任务：迁移 3 个在前、批次 1 六个字段齐全且种子世界不伪完成", async ({ page }) => {
+test("Content Pack 24 个任务：迁移 3 个在前、批次 1 六个字段齐全且种子世界不伪完成", async ({ page }) => {
   await boot(page);
   const result = await page.evaluate(() => {
     const a = (window as any).__CASTLE_TEST__;
@@ -35,7 +35,7 @@ test("Content Pack 18 个任务：迁移 3 个在前、批次 1 六个字段齐�
       statuses: a.getMissions().map((m: { id: string; status: string }) => ({ id: m.id, status: m.status }))
     };
   });
-  expect(result.definitions).toHaveLength(18); // V0.6.1 末尾追加 3 个电力任务（DEV-613 裁定 A）
+  expect(result.definitions).toHaveLength(24); // V07-021 末尾再追加 6 个形式任务（期望值适配已批准）
   expect(result.definitions.slice(0, 3).map((m: { id: string }) => m.id)).toEqual([
     "mission.moat.v1", "mission.well.v1", "mission.dungeon.v1"
   ]);

@@ -31,20 +31,22 @@ function harness(): { world: WorldState; water: WaterPlugin; query: () => Evalua
 }
 
 describe("V51-007 评估器注册表（AC-212 确定性）", () => {
-  it("注册 3 个迁移评估器 + 12 个 V0.51 新增 + 3 个 V0.6.1 电力评估器，ID 唯一；重复注册报错", () => {
+  it("注册 3 个迁移 + 12 个 V0.51 + 3 个 V0.6.1 + 6 个 V0.7 形式评估器，ID 唯一；重复注册报错", () => {
     const registry = createDefaultEvaluatorRegistry();
-    expect(registry.ids()).toHaveLength(18);
+    expect(registry.ids()).toHaveLength(24); // V07-021：6 个形式评估器只追加到同一注册表
     for (const id of [
       "evaluator.moat", "evaluator.well", "evaluator.dungeon",
       "evaluator.water-flow", "evaluator.seven-steps", "evaluator.channel-dam",
       "evaluator.garden-water", "evaluator.broken-pipe", "evaluator.reservoir",
       "evaluator.count-bridge", "evaluator.symmetric-gate", "evaluator.measure-tower",
       "evaluator.section-detective", "evaluator.material-budget", "evaluator.my-design-note",
-      "evaluator.electric-light-beacon", "evaluator.electric-switch-magic", "evaluator.electric-power-pump"
+      "evaluator.electric-light-beacon", "evaluator.electric-switch-magic", "evaluator.electric-power-pump",
+      "evaluator.find-the-pattern", "evaluator.switch-compare", "evaluator.why-no-water-here",
+      "evaluator.choose-water-route", "evaluator.explain-my-choice", "evaluator.story-map"
     ]) {
       expect(registry.has(id), id).toBe(true);
     }
-    expect(new Set(registry.ids()).size).toBe(18);
+    expect(new Set(registry.ids()).size).toBe(24);
     expect(() => registry.register(registry.get("evaluator.moat")!)).toThrow(/Duplicate/);
     expect(registry.get("missing")).toBeUndefined();
   });

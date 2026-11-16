@@ -29,7 +29,7 @@ async function status(page: Page, id: string) {
   );
 }
 
-test("Content Pack 18 个任务：批次 2 六个字段齐全，覆盖 4 个年龄带与全部表达形式（AC-230/231）", async ({ page }) => {
+test("Content Pack 24 个任务：批次 2 六个字段齐全，覆盖 4 个年龄带与六类表达形式（AC-230/231）", async ({ page }) => {
   await boot(page, false);
   const defs = await page.evaluate(() =>
     (window as any).__CASTLE_TEST__.getMissionDefinitions().map((m: any) => ({
@@ -41,8 +41,8 @@ test("Content Pack 18 个任务：批次 2 六个字段齐全，覆盖 4 个年�
       reward: m.reward?.title
     }))
   );
-  expect(defs).toHaveLength(18); // V0.6.1 末尾追加 3 个电力任务（DEV-613 裁定 A）
-  // 切片显式上界 15：保持「批次 2 六个」的原语义，不把追加的电力任务算进批次 2
+  expect(defs).toHaveLength(24); // V07-021 末尾再追加 6 个形式任务（期望值适配已批准）
+  // 切片显式上界 15：保持「批次 2 六个」的原语义，不把追加的电力 / 形式任务算进批次 2
   expect(defs.slice(9, 15).map((d: { id: string }) => d.id)).toEqual(CROSS_AGE_IDS);
   for (const def of defs.slice(9, 15)) {
     expect(def.hintCount).toBeGreaterThanOrEqual(2);
@@ -50,9 +50,9 @@ test("Content Pack 18 个任务：批次 2 六个字段齐全，覆盖 4 个年�
     expect(def.reward.length).toBeGreaterThan(0);
   }
   expect(new Set(defs.map((d: { ageScope: string }) => d.ageScope)).size).toBe(4);
-  // V0.51 覆盖 5 种表达形式；life-simulation 留待 V0.6（AC-231 只需 ≥3）
-  expect(new Set(defs.flatMap((d: { forms: string[] }) => d.forms)).size).toBe(5);
-  expect(defs.filter((d: { forms: string[] }) => d.forms.includes("communication"))).toHaveLength(1);
+  // V07-021：六类表达形式全覆盖（life-simulation 与第 2 个 communication 由新任务补上）
+  expect(new Set(defs.flatMap((d: { forms: string[] }) => d.forms)).size).toBe(6);
+  expect(defs.filter((d: { forms: string[] }) => d.forms.includes("communication"))).toHaveLength(2);
   // 种子世界不得让批次 2 任何任务伪完成
   for (const id of CROSS_AGE_IDS) expect(await status(page, id)).not.toBe("completed");
 });

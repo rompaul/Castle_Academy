@@ -16,6 +16,8 @@ import {
 import { LEARNER_EVENTS, type LearnerProfileRecoveredPayload } from "../../plugins/learner/types";
 import { MissionSidebar } from "./MissionSidebar";
 import { MissionDetailPanel } from "./MissionDetailPanel";
+import { V07FormInteraction } from "./V07FormInteractions";
+import { V07_MISSION_IDS } from "../../content/missions/v07MissionContracts";
 import { EvidenceRecordPanel } from "./EvidenceRecordPanel";
 import { ElectricalStatusBar } from "./ElectricalStatusBar";
 import { ElectricalSafetyGuide } from "./ElectricalSafetyGuide";
@@ -275,7 +277,45 @@ export function MissionExperience({ gameRef }: Props) {
             gameRef.current?.submitTextEvidence(selectedDefinition.id, text) ?? false
           }
           ageBand={profile?.ageBand}
-        />
+        >
+          {V07_MISSION_IDS.includes(selectedDefinition.id) && (() => {
+            // V0.7：只对六个新任务挂形式专属交互；全部数据来自运行时内存，零落盘
+            const runtime = gameRef.current?.missionRuntime;
+            const snapshot = runtime?.getInteractionSnapshot();
+            const missionId = selectedDefinition.id;
+            const switchObservations = gameRef.current?.getElectricalQuery?.()?.getSwitchObservations() ?? [];
+            return (
+              <V07FormInteraction
+                missionId={missionId}
+                form={selectedDefinition.expressionForms[0]}
+                actions={{
+                  submitObservation: (target) => runtime?.submitObservation(missionId, target) ?? false,
+                  submitDecision: (step, choiceId) => runtime?.submitDecision(missionId, step, choiceId) ?? false,
+                  submitHypothesis: (choiceId) => runtime?.submitDecision(missionId, 0, choiceId) ?? false,
+                  submitVariablePair: (row) => runtime?.submitVariablePair({
+                    missionId,
+                    position: row.position,
+                    stateA: "closed",
+                    stateB: "open",
+                    outcomeA: row.closedPowered,
+                    outcomeB: !row.openUnpowered
+                  }) ?? false,
+                  submitReflection: (text) => runtime?.submitReflection(missionId, text) ?? false
+                }}
+                observations={snapshot?.observationLog ?? []}
+                decisions={snapshot?.decisionSequence ?? []}
+                switchObservations={switchObservations}
+                reflection={runtime?.getReflection(missionId) ?? null}
+                explanation={runtime?.getTextEvidence(missionId) ?? null}
+                counts={snapshot ? {
+                  observationLog: snapshot.observationLog.length,
+                  variableComparison: snapshot.variableComparison.length,
+                  decisionSequence: snapshot.decisionSequence.length
+                } : undefined}
+              />
+            );
+          })()}
+        </MissionDetailPanel>
       )}
 
       <OnboardingFlow

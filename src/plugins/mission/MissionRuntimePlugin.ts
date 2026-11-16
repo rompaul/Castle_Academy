@@ -34,6 +34,9 @@ import { isMissionUnlocked } from "../../content/knowledge/missionGraph";
 import type { MasteryEvidenceRecord } from "../learner/types";
 import type { ElectricalQuery } from "../electrical/query";
 import { ELECTRICAL_EVENTS } from "../electrical/events";
+import type { GridPosition } from "../../core/world/coordinates";
+import type { InteractionSnapshot } from "./interactionContracts";
+import { InteractionRecords, type VariablePairInput } from "./interactionRecords";
 
 export interface MissionRuntimeOptions {
   missions?: readonly MissionDefinition[];
@@ -88,12 +91,19 @@ export class MissionRuntimePlugin {
   /**
    * 档案切换后抑制"继承别人的世界状态"直接完成任务（AC-202 互不串扰）：
    * 新档案必须等一次真实的世界变化（water.flow.updated / measurement.used）才允许判定完成。
+   *
+   * V07-021 扩展：观察 / 对照 / 决策 / 文字证据这类**会话内证据**在切档时会被清空，
+   * 本身就是「新档案里的一个真实动作」，不继承世界状态。抑制期间只对刚产生
+   * 会话证据的那个任务放行完成；世界 / 水路类任务仍必须等真实世界变化。
    */
   private completionSuppressed = false;
+  private readonly freshSessionEvidence = new Set<string>();
   private active = false;
   private readonly unsubscribe: Array<() => void> = [];
   /** V51-015+ 学习者文字证据：只在运行时内存，绝不写入档案 / 世界存档（ADR-0006 字段最小化） */
   private readonly textEvidence = new Map<string, string>();
+  /** V07-005：观察 / 两态对照 / 决策序列，有界、只读快照、零落盘（ADR-0014 决策 7） */
+  private readonly interaction = new InteractionRecords();
   /** V06-012：mission.unlocked 只在 locked → 可玩 转变时发射一次（确定性、可重放） */
   private readonly unlockedNotified = new Set<string>();
   /** V06-012：本轮会话中曾处于 locked 的任务（转变检测） */
@@ -125,10 +135,12 @@ export class MissionRuntimePlugin {
     this.unsubscribe.push(
       this.events.on("water.flow.updated", () => {
         this.completionSuppressed = false;
+        this.freshSessionEvidence.clear();
         this.evaluate();
       }),
       this.events.on("measurement.used", () => {
         this.completionSuppressed = false;
+        this.freshSessionEvidence.clear();
         if (!this.measurementUsed) {
           this.measurementUsed = true;
           this.evaluate();
@@ -136,16 +148,26 @@ export class MissionRuntimePlugin {
       }),
       // V51-015/016：结构性变化不改水域时 water.flow.updated 不会发射，
       // 用「收敛后的下一 tick」补一次重算，保证建造/剖面/文字证据类任务即时反馈。
-      this.events.on("world.block.placed", () => { this.structuralDirty = true; }),
-      this.events.on("world.block.removed", () => { this.structuralDirty = true; }),
+      // V07-021：放置 / 拆除方块、剖面切换、电力重算都是「一次真实的世界变化」，
+      // 与 water.flow.updated 同义，同样解除档案切换后的完成抑制（AC-202 口径不变）。
+      this.events.on("world.block.placed", () => {
+        this.noteRealWorldChange();
+        this.structuralDirty = true;
+      }),
+      this.events.on("world.block.removed", () => {
+        this.noteRealWorldChange();
+        this.structuralDirty = true;
+      }),
       // 剖面切换不改变水域，WaterPlugin 不会发射任何 tick；此处直接重算一次。
       this.events.on("section.view.changed", () => {
+        this.noteRealWorldChange();
         this.structuralDirty = true;
         this.evaluate();
       }),
       // V0.6.1：电力重算不改变水域，WaterPlugin 不会发 tick；此处补一次确定性重算。
       // 事件单向：world.block.* → electric.* → 任务判定；任务判定不触发电力重算。
       this.events.on(ELECTRICAL_EVENTS.networkChanged, () => {
+        this.noteRealWorldChange();
         this.structuralDirty = false;
         this.evaluate();
       }),
@@ -162,7 +184,9 @@ export class MissionRuntimePlugin {
         this.measurementUsed = false;
         this.allCompletedNotified = false;
         this.completionSuppressed = true;
+        this.freshSessionEvidence.clear(); // V07-021：新档案不得沿用上一档案的会话证据放行
         this.textEvidence.clear(); // 别人的文字证据不得串到新档案
+        this.interaction.clear(); // V07-005：别人的观察 / 对照 / 决策同样不得串档
         this.structuralDirty = false;
         this.seenLocked.clear(); // V06-012：解锁派生记忆随档案重置
         this.unlockedNotified.clear();
@@ -178,6 +202,9 @@ export class MissionRuntimePlugin {
   dispose(): void {
     this.active = false;
     while (this.unsubscribe.length > 0) this.unsubscribe.pop()?.();
+    this.textEvidence.clear();
+    this.interaction.clear(); // V07-005：卸载释放全部会话记录，重复挂载无残留
+    this.freshSessionEvidence.clear();
   }
 
   /** 侧栏/详情初始化快照 + 测试钩子 getMissions() 数据源。 */
@@ -295,11 +322,19 @@ export class MissionRuntimePlugin {
     this.completionSuppressed = false;
     this.seenLocked.clear();
     this.unlockedNotified.clear();
+    // V07-005 / DEV-701：读档与重置必须连同会话内文字、观察、对照、决策一起清空
+    this.textEvidence.clear();
+    this.interaction.clear();
+    this.freshSessionEvidence.clear();
     this.reloadFromStore();
     this.evaluate();
   }
 
-  /** 显式重算（测试与渲染器 reload 后调用）。 */
+  /**
+   * 显式重算（测试与渲染器 reload 后调用）。
+   * V07-005：只是重算，不清空会话内记录；清空只由读档 / 重置 / 档案切换 / dispose 负责，
+   * 避免「刷新一下就丢掉刚写的想法」破坏既有 V0.51 交流任务判定语义。
+   */
   refresh(): void {
     this.evaluate();
   }
@@ -313,6 +348,7 @@ export class MissionRuntimePlugin {
     const trimmed = text.trim();
     if (trimmed.length === 0) return false;
     this.textEvidence.set(missionId, trimmed);
+    this.markFreshSessionEvidence(missionId);
     this.structuralDirty = true;
     this.evaluate();
     return true;
@@ -320,6 +356,72 @@ export class MissionRuntimePlugin {
 
   getTextEvidence(missionId: string): string | null {
     return this.textEvidence.get(missionId) ?? null;
+  }
+
+  /* ---------------- V07-005 形式交互记录（运行时内存，零落盘） ---------------- */
+
+  /** Exploration：登记一条去重后的观察；不评价文字内容。 */
+  submitObservation(missionId: string, target: string, position?: Readonly<GridPosition>): boolean {
+    if (!this.getDefinition(missionId)) return false;
+    if (!this.interaction.addObservation(missionId, target.trim(), position)) return false;
+    this.markFreshSessionEvidence(missionId);
+    this.recomputeAfterInteraction();
+    return true;
+  }
+
+  /** Experiment：登记同一位置的两态对照；只记既有二值状态，不记物理量。 */
+  submitVariablePair(input: VariablePairInput): boolean {
+    if (!this.getDefinition(input.missionId)) return false;
+    if (!this.interaction.addVariablePair(input)) return false;
+    this.markFreshSessionEvidence(input.missionId);
+    this.recomputeAfterInteraction();
+    return true;
+  }
+
+  /** Life simulation：登记 / 改一次情境选择；不写 WorldState。 */
+  submitDecision(missionId: string, step: number, choiceId: string): boolean {
+    if (!this.getDefinition(missionId)) return false;
+    if (!this.interaction.addDecision(missionId, step, choiceId.trim())) return false;
+    this.markFreshSessionEvidence(missionId);
+    this.recomputeAfterInteraction();
+    return true;
+  }
+
+  /** 供本地证据面板与评估器消费的冻结只读快照。 */
+  getInteractionSnapshot(): InteractionSnapshot {
+    return this.interaction.snapshot();
+  }
+
+  /**
+   * V07-018 反思文本：可选、可跳过，只在运行时内存，**不进 baseQuery()**，
+   * 因此不参与完成 / 掌握 / 奖励判定，也不产生掌握证据；读档 / 重置 / 卸载随其它记录一起清空。
+   */
+  submitReflection(missionId: string, text: string): boolean {
+    if (!this.getDefinition(missionId)) return false;
+    return this.interaction.setReflection(missionId, text);
+  }
+
+  getReflection(missionId: string): string | null {
+    return this.interaction.getReflection(missionId);
+  }
+
+  /**
+   * V07-021：把「本档案内刚产生的一条会话证据」记成一次真实动作。
+   * 反思文本不走这里（可选、可跳过、不参与判定），因此单独写反思不会解除抑制。
+   */
+  private markFreshSessionEvidence(missionId: string): void {
+    this.freshSessionEvidence.add(missionId);
+  }
+
+  /** 一次真实的世界变化：解除档案切换抑制，并清掉上一档案的会话证据放行标记。 */
+  private noteRealWorldChange(): void {
+    this.completionSuppressed = false;
+    this.freshSessionEvidence.clear();
+  }
+
+  private recomputeAfterInteraction(): void {
+    this.structuralDirty = true;
+    this.evaluate();
   }
 
   /* ---------------- 内部 ---------------- */
@@ -363,6 +465,7 @@ export class MissionRuntimePlugin {
   }
 
   private baseQuery() {
+    const interaction = this.interaction.snapshot();
     return {
       water: this.water.getQuery(),
       everWet: this.everWet as ReadonlySet<string>,
@@ -370,7 +473,10 @@ export class MissionRuntimePlugin {
       world: this.world,
       textEvidence: this.textEvidence as ReadonlyMap<string, string>,
       sectionEnabled: this.sectionEnabled(),
-      electrical: this.electrical?.()
+      electrical: this.electrical?.(),
+      observationLog: interaction.observationLog,
+      variableComparison: interaction.variableComparison,
+      decisionSequence: interaction.decisionSequence
     };
   }
 
@@ -423,7 +529,10 @@ export class MissionRuntimePlugin {
         complete: state.status === "completed"
       });
 
-      if (state.complete && !this.completionSuppressed && !unavailable && !this.completedNotified.has(mission.id)) {
+      // V07-021：抑制期间只对「本档案刚产生会话证据」的任务放行完成；
+      // 水路 / 世界类任务仍须等真实世界变化（AC-202 互不串扰口径不变）。
+      const completionAllowed = !this.completionSuppressed || this.freshSessionEvidence.has(mission.id);
+      if (state.complete && completionAllowed && !unavailable && !this.completedNotified.has(mission.id)) {
         this.completedNotified.add(mission.id);
         state.status = "completed";
         this.states.set(mission.id, state);

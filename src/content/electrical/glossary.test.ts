@@ -122,9 +122,10 @@ describe("V061-018/019/020 电力任务 schema v2 与内容质量（AC-6739~6744
     expect(ELECTRICAL_LOW_AGE_PATHS.C2.system).toBe("water");
     expect(ELECTRICAL_LOW_AGE_PATHS.C1.hintLadder).toHaveLength(3);
     expect(ELECTRICAL_LOW_AGE_PATHS.C2.hintLadder).toHaveLength(3);
-    // Q-3 只批 3 个任务：15 → 18，不新增第 4/5 个任务 ID（DEV-613 裁定 A）
-    expect(ALL_MISSIONS).toHaveLength(18);
-    expect(ALL_MISSIONS.slice(-3).map((m) => m.id))
+    // Q-3 只批 3 个电力任务（15 → 18）；V0.7 再在末尾追加 6 个形式任务（18 → 24），
+    // 电力三任务仍固定占第 15~17 位，既有 ID 与顺序零变更。
+    expect(ALL_MISSIONS).toHaveLength(24);
+    expect(ALL_MISSIONS.slice(15, 18).map((m) => m.id))
       .toEqual(ELECTRICAL_MISSIONS.map((m) => m.id));
   });
 
@@ -134,11 +135,11 @@ describe("V061-018/019/020 电力任务 schema v2 与内容质量（AC-6739~6744
     expect(ELECTRICAL_MISSIONS[2].prerequisiteMissionIds).toEqual([]);
     const graph = resolveMissionGraph(ALL_MISSIONS);
     expect(graph.errors).toEqual([]);
-    expect(graph.order).toHaveLength(18);
+    expect(graph.order).toHaveLength(24);
     const edges = ALL_MISSIONS.flatMap((m) =>
       m.prerequisiteMissionIds.map((pre) => [pre, m.id] as const)
     ).sort();
-    expect(edges).toHaveLength(4);
+    expect(edges).toHaveLength(5); // V07-011 新增第 5 条链
     expect(edges).toContainEqual(["mission.electric-light-beacon.v1", "mission.electric-switch-magic.v1"]);
   });
 

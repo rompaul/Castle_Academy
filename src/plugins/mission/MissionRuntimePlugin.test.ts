@@ -56,7 +56,7 @@ describe("V51-007 MissionRuntimePlugin（状态机 + 双事件迁移期）", () 
     water.dispose();
   });
 
-  it("激活时发射 mission.offered 与旧 quest.updated；14 个 available + 4 个 locked（V06-011 / V0.6.1）", () => {
+  it("激活时发射 mission.offered 与旧 quest.updated；19 个 available + 5 个 locked（V06-011 / V0.6.1 / V0.7）", () => {
     const offered: MissionOfferedPayload[] = [];
     const quests: QuestUpdatedPayload[] = [];
     events.on<MissionOfferedPayload>(MISSION_EVENTS.offered, (e) => offered.push(e.payload));
@@ -64,18 +64,19 @@ describe("V51-007 MissionRuntimePlugin（状态机 + 双事件迁移期）", () 
     runtime.activate();
 
     expect(offered.length).toBeGreaterThan(0);
-    expect(offered[0].missions).toHaveLength(18);
+    expect(offered[0].missions).toHaveLength(24); // V07-021：6 个形式任务只追加到末尾
     expect(offered[0].missions.slice(0, 3).map((m) => m.id)).toEqual([
       "mission.moat.v1", "mission.well.v1", "mission.dungeon.v1"
     ]);
     const byId = new Map(offered[0].missions.map((m) => [m.id, m.status]));
-    // V0.51 断言原为「15 个全 available」；V0.6 先决条件 3 边、V0.6.1 追加 A→B 后，
-    // 下游 4 个为 locked 派生态（含新增的「开关的魔法」）。
+    // V0.51 断言原为「15 个全 available」；V0.6 先决条件 3 边、V0.6.1 追加 A→B、
+    // V0.7 追加 find-the-pattern → choose-water-route 后，下游 5 个为 locked 派生态。
     expect(byId.get("mission.seven-steps.v1")).toBe("locked");
     expect(byId.get("mission.broken-pipe.v1")).toBe("locked");
     expect(byId.get("mission.material-budget.v1")).toBe("locked");
     expect(byId.get("mission.electric-switch-magic.v1")).toBe("locked");
-    expect([...byId.values()].filter((s) => s === "available")).toHaveLength(14);
+    expect(byId.get("mission.choose-water-route.v1")).toBe("locked");
+    expect([...byId.values()].filter((s) => s === "available")).toHaveLength(19);
     expect(quests.length).toBeGreaterThan(0);
     expect(quests[0].quests.map((q) => q.id)).toEqual(["quest-moat", "quest-well", "quest-dungeon"]);
   });
@@ -120,7 +121,7 @@ describe("V51-007 MissionRuntimePlugin（状态机 + 双事件迁移期）", () 
     const custom = new MissionRuntimePlugin(water, events, { capabilities, reward });
     custom.activate();
     const list = custom.getMissions();
-    expect(list).toHaveLength(18);
+    expect(list).toHaveLength(24);
     expect(list.every((m) => m.status === "unavailable")).toBe(true);
     expect(list[0].progressText).toBe("暂不可玩");
     expect(custom.activateMission("mission.moat.v1")).toBe(false);

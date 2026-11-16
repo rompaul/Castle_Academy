@@ -52,6 +52,8 @@ export interface GameActions {
   getElectricalStatus: () => ElectricalStatusKey | null;
   /** DEV-615：注视开关 / 阀门时按一下切换两态（「生活中的开关」） */
   toggleFocusedBlock: () => boolean;
+  /** V0.7：两态对照卡只读电力观察；可选方法，旧调用方零影响 */
+  getElectricalQuery?: () => import("../plugins/electrical/query").ElectricalQuery;
 }
 
 interface Props {
@@ -138,7 +140,8 @@ export function GameCanvas({ selectedBlock, onPlayingChange, onMessage, onPersis
         loadStates: engine.electricalPlugin.getQuery().getLoadStates(),
         blocks: engine.world.all()
       }),
-      toggleFocusedBlock: () => engine.toggleFocusedBlock()
+      toggleFocusedBlock: () => engine.toggleFocusedBlock(),
+      getElectricalQuery: () => engine.electricalPlugin.getQuery()
     };
 
     // Persist layer/section view state whenever it changes (V0.4).

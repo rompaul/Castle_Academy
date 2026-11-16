@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import type { MissionDefinition, MissionSummary } from "../../content/missions/types";
 import { getKnowledgePointById } from "../../content/knowledge/registry";
@@ -22,6 +22,8 @@ interface Props {
   onSubmitEvidence?: (text: string) => boolean;
   /** DEV-616：当前学习者档案年龄带；6-7 档查看活动 C 时启用单系统子路径 */
   ageBand?: AgeBand;
+  /** V07-013~019：仅六个新任务由容器注入形式专属交互区；既有 18 个任务零 UI 变化 */
+  children?: ReactNode;
 }
 
 /**
@@ -31,7 +33,7 @@ interface Props {
  */
 export function MissionDetailPanel({
   definition, summary, hintsUsed, missingCapabilities,
-  onUseHint, onClose, onFreeBuild, onSubmitEvidence, ageBand
+  onUseHint, onClose, onFreeBuild, onSubmitEvidence, ageBand, children
 }: Props) {
   const [revealed, setRevealed] = useState(0);
   const [note, setNote] = useState("");
@@ -193,6 +195,9 @@ export function MissionDetailPanel({
               <span className="ca-detail-label">换个思路 · 说说你的做法</span>
               <p className="ca-reflection">{definition.reflectionPrompt}</p>
             </div>
+
+            {/* V07-013~019：仅六个新任务由容器注入；既有任务的面板结构逐字不变 */}
+            {children && <div className="ca-detail-section">{children}</div>}
 
             {isElectrical && (
               <div className="ca-safety-note" data-testid="electrical-safety-notes">

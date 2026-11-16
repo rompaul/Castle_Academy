@@ -15,6 +15,7 @@ import {
   type QuestState
 } from "../plugins/learning/castleQuests";
 import { MissionExperience } from "../ui/mission/MissionExperience";
+import { isTypingTarget } from "../ui/mission/v07InteractionModel";
 
 export function App() {
   const [selectedBlock, setSelectedBlock] = useState<BlockId>("grass");
@@ -145,19 +146,20 @@ export function App() {
       if (event.key === "Escape") {
         setPlaying(false);
         setPaletteOpen(false);
+        return;
       }
+      // V07-018 / DEV-704：输入框里一律不触发世界快捷键（数字键 / E / F / Tab / 滚轮）；
+      // Tab 在输入时不拦截，保留浏览器默认的焦点切换。
+      const target = event.target as HTMLElement | null;
+      if (isTypingTarget(target)) return;
       // DDR-0002：数字键 1–9 切快捷格；默认 9 格仍为 BLOCKS[0..8]，V0.5 基线语义不变。
       const index = Number(event.key) - 1;
       if (index >= 0 && index < QUICK_SLOT_COUNT) {
         setActiveSlot(index);
         setSelectedBlock(quickSlots[index]);
       }
-      const target = event.target as HTMLElement | null;
-      const typing = !!target && (
-        target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable
-      );
       // E 打开 / 关闭「所有方块」分类面板（MC 式物品栏入口）
-      if (event.key.toLowerCase() === "e" && !event.repeat && !typing) {
+      if (event.key.toLowerCase() === "e" && !event.repeat) {
         setPaletteOpen((open) => !open);
       }
       if (event.key === "Tab") {
@@ -180,10 +182,11 @@ export function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [buildingTool, gameRef, quickSlots]);
 
-  // DDR-0002：滚轮切快捷格；分类面板打开时不抢占面板自身的滚动。
+  // DDR-0002：滚轮切快捷格；分类面板打开或焦点在输入框时不抢占滚动/输入。
   useEffect(() => {
     const onWheel = (event: WheelEvent) => {
       if (paletteOpen || event.deltaY === 0) return;
+      if (isTypingTarget(event.target as HTMLElement | null)) return;
       const step = event.deltaY > 0 ? 1 : -1;
       const next = (activeSlot + step + QUICK_SLOT_COUNT) % QUICK_SLOT_COUNT;
       setActiveSlot(next);

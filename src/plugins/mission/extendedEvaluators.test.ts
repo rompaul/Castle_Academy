@@ -200,7 +200,7 @@ describe("V51-015 批次 1 评估器（AC-212 确定性）", () => {
 describe("V51-016 批次 2 内容质量（AC-230/231/232）", () => {
   it("6 个跨年龄带任务全部通过内容质量清单，全集覆盖 4 个年龄带与 6 种表达形式", () => {
     expect(CROSS_AGE_MISSIONS).toHaveLength(6);
-    expect(ALL_MISSIONS).toHaveLength(18); // V0.6.1：末尾追加 3 个电力任务（DEV-613 裁定 A）
+    expect(ALL_MISSIONS).toHaveLength(24); // V07-021：末尾再追加 6 个形式任务（期望值适配已批准）
     for (const mission of CROSS_AGE_MISSIONS) {
       expect(validateMissionDefinition(mission), mission.id).toEqual({ ok: true });
       expect(mission.hintLadder.length).toBeGreaterThanOrEqual(2);
@@ -209,11 +209,11 @@ describe("V51-016 批次 2 内容质量（AC-230/231/232）", () => {
       expect(mission.reward?.kind).toBe("title");
     }
     expect(new Set(ALL_MISSIONS.map((m) => m.ageScope)).size).toBe(4);
-    // 5 种表达形式；life-simulation 留 V0.6（AC-231 阈值 ≥3）
-    expect(new Set(ALL_MISSIONS.flatMap((m) => m.expressionForms)).size).toBe(5);
+    // V07-021：六类表达形式全覆盖（life-simulation 与第 2 个 communication 由新任务补上）
+    expect(new Set(ALL_MISSIONS.flatMap((m) => m.expressionForms)).size).toBe(6);
     const communication = ALL_MISSIONS.filter((m) => m.expressionForms.includes("communication"));
-    expect(communication).toHaveLength(1);
-    expect(communication[0].id).toBe("mission.my-design-note.v1");
+    expect(communication).toHaveLength(2);
+    expect(communication.map((m) => m.id)).toContain("mission.my-design-note.v1");
   });
 
   it("批次 2 六个评估器都有可达完成路径，describe 与 evaluate 一致", () => {

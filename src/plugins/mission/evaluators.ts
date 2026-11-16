@@ -11,9 +11,11 @@
 import type { GridPosition } from "../../core/world/coordinates";
 import type { WaterQuery } from "../water/WaterPlugin";
 import type { ElectricalQuery } from "../electrical/query";
+import type { DecisionEntry, ObservationEntry, VariablePair } from "./interactionContracts";
 import { MOAT_FLOOR_CELLS, WELL_SHAFT_CELLS, DUNGEON_DRY_CELLS } from "../learning/castleStage";
 import { registerExtendedEvaluators } from "./extendedEvaluators";
 import { registerElectricalEvaluators } from "./electricalEvaluators";
+import { registerInteractiveEvaluators } from "./interactiveEvaluators";
 
 /* ==================== 以下为 V0.5 原样迁移（勿改写） ==================== */
 
@@ -150,6 +152,13 @@ export interface EvaluatorQuery {
   sectionEnabled?: boolean;
   /** V0.6.1（V061-021）：电力只读查询；未注入时电力评估器降级为 0 进度，便于单测 */
   electrical?: ElectricalQuery;
+  /**
+   * V0.7（V07-004）：三个交互只读通道，运行时派生、有界、零落盘。
+   * 一律可选：既有 18 个评估器签名与全部单测构造点零改动；未注入时按空集合降级。
+   */
+  observationLog?: ReadonlyArray<ObservationEntry>;
+  variableComparison?: ReadonlyArray<VariablePair>;
+  decisionSequence?: ReadonlyArray<DecisionEntry>;
 }
 
 export interface EvaluatorResult {
@@ -238,6 +247,8 @@ export function createDefaultEvaluatorRegistry(): EvaluatorRegistry {
   registerExtendedEvaluators(registry);
   // V0.6.1（V061-021）：3 个电力评估器，仍是同一个注册表、同样的纯函数契约。
   registerElectricalEvaluators(registry);
+  // V0.7（V07-021）：六类形式专属评估器，只追加到同一注册表；既有 18 个 ID 零变更。
+  registerInteractiveEvaluators(registry);
   return registry;
 }
 
